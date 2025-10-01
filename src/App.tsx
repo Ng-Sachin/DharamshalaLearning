@@ -18,6 +18,9 @@ import MentorDashboard from './components/Mentor/MentorDashboard';
 import MenteeReview from './components/Mentor/MenteeReview';
 import PairProgrammingManagement from './components/Mentor/PairProgrammingManagement';
 
+// Admin Components
+import AdminDashboard from './components/Admin/AdminDashboard';
+
 // Error Components
 const Unauthorized = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -105,6 +108,13 @@ function App() {
             <Route path="/mentor/pair-programming" element={
               <ProtectedRoute requiredRoles={['mentor']}>
                 <PairProgrammingManagement />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin Routes */}
+            <Route path="/admin/dashboard" element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <AdminDashboard />
               </ProtectedRoute>
             } />
 
