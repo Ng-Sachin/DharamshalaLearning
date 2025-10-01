@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Users can read all users (for mentor/student lookups)
+    match /users/{document} {
+      allow read: if request.auth != null;
+    }
+    
+    // Users can read phases and topics (reference data)
+    match /phases/{document} {
+      allow read: if request.auth != null;
+    }
+    
+    match /topics/{document} {
+      allow read: if request.auth != null;
+    }
+    
+    // Students can read/write their own goals
+    match /goals/{goalId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.studentId || 
+         request.auth.uid == request.resource.data.studentId);
+    }
+    
+    // Students can read/write their own reflections
+    match /reflections/{reflectionId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.studentId || 
+         request.auth.uid == request.resource.data.studentId);
+    }
+    
+    // Students can read/write their own pair programming requests
+    match /pairProgrammingRequests/{requestId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.studentId || 
+         request.auth.uid == request.resource.data.studentId);
+    }
+    
+    // Students can read/write their own attendance
+    match /attendance/{attendanceId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.studentId || 
+         request.auth.uid == request.resource.data.studentId);
+    }
+    
+    // Mentors can read/write mentor notes for their mentees
+    match /mentorNotes/{noteId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.mentorId || 
+         request.auth.uid == request.resource.data.mentorId);
+    }
+    
+    // Student progress can be read by the student and their mentor
+    match /studentProgress/{progressId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.studentId || 
+         request.auth.uid == request.resource.data.studentId);
+    }
+    
+    // Leave requests can be read/written by the student
+    match /leaveRequests/{requestId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.studentId || 
+         request.auth.uid == request.resource.data.studentId);
+    }
+  }
+}

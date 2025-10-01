@@ -1,0 +1,19 @@
+{"users": [
+{
+  "localId": "c0CYxJsyjrWrmogkSFtS7MRBWgp2",
+  "email": "mubin@navgurukul.org",
+  "emailVerified": true,
+  "displayName": "Mubin",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocItAzx_cptX7jAPMeTWitcyWlG8wpvTXa12QmM2juBsqmA0Iuc=s96-c",
+  "lastSignedInAt": "1759313320572",
+  "createdAt": "1759312694079",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "100716450297754725417",
+      "email": "mubin@navgurukul.org",
+      "displayName": "Mubin",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocItAzx_cptX7jAPMeTWitcyWlG8wpvTXa12QmM2juBsqmA0Iuc=s96-c"
+    }
+  ]
+}]}
