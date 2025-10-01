@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   PhaseService, 
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 
 const GoalSetting: React.FC = () => {
+  const navigate = useNavigate();
   const { userData } = useAuth();
   const [phases, setPhases] = useState<Phase[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -216,11 +218,16 @@ const GoalSetting: React.FC = () => {
       }
 
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-      
+      setTimeout(() => setSuccess(false), 1000);
+
       // Reload today's goal
       const updatedGoal = await GoalService.getTodaysGoal(userData.id);
       setTodaysGoal(updatedGoal);
+
+      // Redirect to homepage after short delay
+      setTimeout(() => {
+        navigate('/');
+      }, 1200);
     } catch (error) {
       console.error('Error saving goal:', error);
       setError('Failed to save goal. Please try again.');
@@ -361,9 +368,9 @@ const GoalSetting: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                   <div>
                     <p className="font-medium text-blue-800 mb-1">⏱️ Max Time</p>
-                    <p className="text-blue-700">
-                      {topicDetails.maxTime > 0 ? `${topicDetails.maxTime} minutes` : 'Flexible timing'}
-                    </p>
+                    {topicDetails.maxTime && topicDetails.maxTime > 0 ? (
+                      <p className="text-blue-700">{`${topicDetails.maxTime} minutes`}</p>
+                    ) : null}
                   </div>
                   <div>
                     <p className="font-medium text-blue-800 mb-1">📹 Deliverable</p>
@@ -485,36 +492,7 @@ const GoalSetting: React.FC = () => {
                   </div>
                 </div>
                 
-                {(() => {
-                  const level = getAchievementLevel(formData.target_percentage);
-                  const colorClasses = {
-                    red: 'bg-red-50 border-red-200 text-red-700 text-red-600 bg-red-500',
-                    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700 text-yellow-600 bg-yellow-500',
-                    blue: 'bg-blue-50 border-blue-200 text-blue-700 text-blue-600 bg-blue-500',
-                    green: 'bg-green-50 border-green-200 text-green-700 text-green-600 bg-green-500'
-                  };
-                  return (
-                    <div className={`p-2 rounded-md text-sm ${level.color === 'red' ? 'bg-red-50 border-red-200' : 
-                      level.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' : 
-                      level.color === 'blue' ? 'bg-blue-50 border-blue-200' : 
-                      'bg-green-50 border-green-200'}`}>
-                      <div className={`flex items-center space-x-2 ${level.color === 'red' ? 'text-red-700' : 
-                        level.color === 'yellow' ? 'text-yellow-700' : 
-                        level.color === 'blue' ? 'text-blue-700' : 
-                        'text-green-700'}`}>
-                        <div className={`w-3 h-3 rounded-full ${level.color === 'red' ? 'bg-red-500' : 
-                          level.color === 'yellow' ? 'bg-yellow-500' : 
-                          level.color === 'blue' ? 'bg-blue-500' : 
-                          'bg-green-500'}`}></div>
-                        <span className="font-medium">{level.label}</span>
-                      </div>
-                      <p className={`mt-1 ${level.color === 'red' ? 'text-red-600' : 
-                        level.color === 'yellow' ? 'text-yellow-600' : 
-                        level.color === 'blue' ? 'text-blue-600' : 
-                        'text-green-600'}`}>{level.description}</p>
-                    </div>
-                  );
-                })()}
+                {/* Achievement level element removed as requested */}
               </div>
             </div>
 

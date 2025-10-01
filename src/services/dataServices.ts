@@ -76,24 +76,29 @@ export class GoalService extends FirestoreService {
   }
 
   static async getTodaysGoal(studentId: string): Promise<DailyGoal | null> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Get start and end of today in UTC
+    const now = new Date();
+    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
 
-    const goals = await this.getWhere<DailyGoal>(
+    // Firestore Timestamp
+    const { Timestamp } = await import('firebase/firestore');
+    const startTimestamp = Timestamp.fromDate(startOfDay);
+    const endTimestamp = Timestamp.fromDate(endOfDay);
+
+    // Query for today's goal using compound query
+    // Note: Firestore requires a composite index for this query
+    const goals = await this.getWhereCompound<DailyGoal>(
       COLLECTIONS.DAILY_GOALS,
-      'student_id',
-      '==',
-      studentId
+      [
+        { field: 'student_id', operator: '==', value: studentId },
+        { field: 'created_at', operator: '>=', value: startTimestamp },
+        { field: 'created_at', operator: '<', value: endTimestamp }
+      ]
     );
-
-    // Filter by today's date (client-side filtering for date range)
-    return goals.find(goal => {
-      const goalDate = goal.created_at instanceof Date ? goal.created_at : new Date(goal.created_at);
-      return goalDate >= today && goalDate < tomorrow;
-    }) || null;
+    return goals.length > 0 ? goals[0] : null;
   }
+// Add compound query support to FirestoreService
 
   static async getPendingGoalsForMentor(mentorId: string): Promise<DailyGoal[]> {
     // This would need a compound query or client-side filtering

@@ -1,85 +1,22 @@
-rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can read and write their own user document
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Allow read access to all users for curriculum (phases, topics)
+    match /phases/{phaseId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
     }
-    
-    // Users can read all users (for mentor/student lookups)
-    match /users/{document} {
-      allow read: if request.auth != null;
+    match /topics/{topicId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
     }
-    
-    // Users can read phases and topics (reference data)
-    // Admins can write to seed initial data
-    match /phases/{document} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    // Allow students to create and read their own goals
+    match /goals/{goalId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow write: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
-    
-    match /topics/{document} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    
-    // Students can read/write their own daily goals
-    match /daily_goals/{goalId} {
-      allow read, write: if request.auth != null && 
-        (request.auth.uid == resource.data.student_id || 
-         request.auth.uid == request.resource.data.student_id);
-    }
-    
-    // Mentors can read goals from their mentees
-    match /daily_goals/{goalId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Students can read/write their own daily reflections
-    match /daily_reflections/{reflectionId} {
-      allow read, write: if request.auth != null && 
-        (request.auth.uid == resource.data.student_id || 
-         request.auth.uid == request.resource.data.student_id);
-    }
-    
-    // Mentors can read reflections from their mentees
-    match /daily_reflections/{reflectionId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Students can read/write their own pair programming requests
-    match /pair_programming_requests/{requestId} {
-      allow read, write: if request.auth != null && 
-        (request.auth.uid == resource.data.student_id || 
-         request.auth.uid == request.resource.data.student_id);
-    }
-    
-    // Mentors can read/write pair programming requests
-    match /pair_programming_requests/{requestId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Students can read/write their own attendance
-    match /attendance/{attendanceId} {
-      allow read, write: if request.auth != null && 
-        (request.auth.uid == resource.data.student_id || 
-         request.auth.uid == request.resource.data.student_id);
-    }
-    
-    // Mentors can read/write mentor notes
-    match /mentor_notes/{noteId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Student progress can be read by authenticated users
-    match /student_progress/{progressId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Leave requests can be read/written by authenticated users
-    match /leave_requests/{requestId} {
-      allow read, write: if request.auth != null;
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -34,6 +34,29 @@ export const COLLECTIONS = {
 
 // Generic CRUD operations
 export class FirestoreService {
+  // Compound query support
+  static async getWhereCompound<T>(
+    collectionName: string,
+    conditions: Array<{ field: string; operator: any; value: any }>,
+    orderByField?: string,
+    orderDirection: 'asc' | 'desc' = 'desc'
+  ): Promise<T[]> {
+    try {
+      let queryConstraints: any[] = conditions.map(cond => where(cond.field, cond.operator, cond.value));
+      if (orderByField) {
+        queryConstraints.push(orderBy(orderByField, orderDirection));
+      }
+      const q = query(collection(db, collectionName), ...queryConstraints);
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as T[];
+    } catch (error) {
+      console.error(`Error in compound query for ${collectionName}:`, error);
+      throw error;
+    }
+  }
   // Create document
   static async create<T>(collectionName: string, data: Omit<T, 'id'>): Promise<string> {
     try {
