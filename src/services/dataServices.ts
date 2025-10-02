@@ -86,17 +86,16 @@ export class GoalService extends FirestoreService {
     const startTimestamp = Timestamp.fromDate(startOfDay);
     const endTimestamp = Timestamp.fromDate(endOfDay);
 
-    // Query for today's goal using compound query
-    // Note: Firestore requires a composite index for this query
-    const goals = await this.getWhereCompound<DailyGoal>(
-      COLLECTIONS.DAILY_GOALS,
-      [
-        { field: 'student_id', operator: '==', value: studentId },
-        { field: 'created_at', operator: '>=', value: startTimestamp },
-        { field: 'created_at', operator: '<', value: endTimestamp }
-      ]
-    );
-    return goals.length > 0 ? goals[0] : null;
+    // Get all goals for the student (uses single-field index)
+    const allGoals = await this.getGoalsByStudent(studentId);
+
+    // Filter for today's goals client-side
+    const todaysGoals = allGoals.filter(goal => {
+      const goalTimestamp = Timestamp.fromDate(goal.created_at);
+      return goalTimestamp >= startTimestamp && goalTimestamp < endTimestamp;
+    });
+
+    return todaysGoals.length > 0 ? todaysGoals[0] : null;
   }
 // Add compound query support to FirestoreService
 
