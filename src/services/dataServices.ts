@@ -42,7 +42,11 @@ export class TopicService extends FirestoreService {
   }
 
   static async getTopicsByPhase(phaseId: string): Promise<Topic[]> {
-    return this.getWhere<Topic>(COLLECTIONS.TOPICS, 'phase_id', '==', phaseId, 'order', 'asc');
+    // Get all topics for the phase (uses single-field index on phase_id)
+    const topics = await this.getWhere<Topic>(COLLECTIONS.TOPICS, 'phase_id', '==', phaseId);
+
+    // Sort by order client-side
+    return topics.sort((a, b) => a.order - b.order);
   }
 
   static async getTopicById(id: string): Promise<Topic | null> {
