@@ -12,57 +12,47 @@ import {
   X,
   Bell
 } from 'lucide-react';
-import { UserRole } from '../../types';
+
 
 interface NavItem {
   label: string;
   path: string;
   icon: React.ComponentType<any>;
-  roles: UserRole[];
+  adminOnly?: boolean;
 }
 
 const navigationItems: NavItem[] = [
   {
     label: 'Dashboard',
     path: '/dashboard',
-    icon: Home,
-    roles: ['student', 'mentor', 'admin']
+    icon: Home
   },
   {
     label: 'Goals & Reflections',
     path: '/goals',
-    icon: BarChart3,
-    roles: ['student']
+    icon: BarChart3
   },
   {
-    label: 'Journey',
+    label: 'Learning Journey',
     path: '/journey',
-    icon: User,
-    roles: ['student']
+    icon: User
   },
   {
-    label: 'Pair Programming',
-    path: '/pair-programming',
-    icon: Users,
-    roles: ['student', 'mentor']
-  },
-  {
-    label: 'Mentees',
-    path: '/mentees',
-    icon: Users,
-    roles: ['mentor']
+    label: 'Mentor Dashboard',
+    path: '/mentor/dashboard',
+    icon: Users
   },
   {
     label: 'Campus Overview',
     path: '/campus',
     icon: BarChart3,
-    roles: ['admin']
+    adminOnly: true
   },
   {
     label: 'Settings',
     path: '/settings',
     icon: Settings,
-    roles: ['admin']
+    adminOnly: true
   }
 ];
 
@@ -88,8 +78,8 @@ const Navigation: React.FC<NavigationProps> = ({
     }
   };
 
-  const filteredNavItems = navigationItems.filter(item =>
-    userData && item.roles.includes(userData.role)
+  const filteredNavItems = navigationItems.filter(item => 
+    !item.adminOnly || (userData && userData.isAdmin)
   );
 
   const isActive = (path: string) => location.pathname === path;
@@ -166,8 +156,8 @@ const Navigation: React.FC<NavigationProps> = ({
                   <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
                     {userData?.name}
                   </p>
-                  <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700 capitalize">
-                    {userData?.role}
+                  <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700">
+                    {userData?.isAdmin ? 'Admin' : ''}
                   </p>
                 </div>
                 <button
@@ -240,8 +230,8 @@ const Navigation: React.FC<NavigationProps> = ({
                   <p className="text-base font-medium text-gray-700">
                     {userData?.name}
                   </p>
-                  <p className="text-sm font-medium text-gray-500 capitalize">
-                    {userData?.role}
+                  <p className="text-sm font-medium text-gray-500">
+                    {userData?.isAdmin ? 'Admin' : ''}
                   </p>
                 </div>
                 <button

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   GoalService, 
@@ -23,7 +24,11 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  BookOpen
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Award,
+  Star
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -38,6 +43,7 @@ interface DashboardStats {
 }
 
 const StudentDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { userData } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     todayGoal: null,
@@ -50,6 +56,7 @@ const StudentDashboard: React.FC = () => {
     averageAchievement: 0
   });
   const [loading, setLoading] = useState(true);
+  const [expandedReflection, setExpandedReflection] = useState(false);
 
   useEffect(() => {
     if (userData) {
@@ -62,9 +69,12 @@ const StudentDashboard: React.FC = () => {
 
     try {
       setLoading(true);
+      console.log('📊 [StudentDashboard] Loading dashboard data for user:', userData.id);
 
       // Load today's goal and reflection
+      console.log('🎯 [StudentDashboard] Fetching today\'s goal...');
       const todayGoal = await GoalService.getTodaysGoal(userData.id);
+      console.log('🎯 [StudentDashboard] Today\'s goal result:', todayGoal);
       let todayReflection = null;
       
       if (todayGoal) {
@@ -72,7 +82,9 @@ const StudentDashboard: React.FC = () => {
       }
 
       // Load recent goals for achievement calculation
+      console.log('📋 [StudentDashboard] Fetching recent goals...');
       const recentGoals = await GoalService.getGoalsByStudent(userData.id, 10);
+      console.log('📋 [StudentDashboard] Recent goals count:', recentGoals.length, recentGoals);
       
       // Calculate average achievement from recent reflections
       const goalIds = recentGoals.map(goal => goal.id);
@@ -90,38 +102,59 @@ const StudentDashboard: React.FC = () => {
         : 0;
 
       // Load pair programming sessions
-      const pairProgrammingRequests = await PairProgrammingService.getRequestsByStudent(userData.id);
-      const completedSessions = pairProgrammingRequests.filter(req => req.status === 'completed').length;
+      let completedSessions = 0;
+      try {
+        const pairProgrammingRequests = await PairProgrammingService.getRequestsByStudent(userData.id);
+        completedSessions = pairProgrammingRequests.filter(req => req.status === 'completed').length;
+        console.log('👥 [StudentDashboard] Pair programming sessions loaded:', completedSessions);
+      } catch (error) {
+        console.warn('⚠️ [StudentDashboard] Failed to load pair programming sessions:', error);
+        // Continue with default value of 0
+      }
 
       // Load attendance data (simplified calculation)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const attendanceRecords = await AttendanceService.getStudentAttendance(userData.id);
+      let monthlyAttendance = 0;
+      try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const attendanceRecords = await AttendanceService.getStudentAttendance(userData.id);
       
       const recentAttendance = attendanceRecords.filter(record => {
         const recordDate = new Date(record.date);
         return recordDate >= thirtyDaysAgo;
       });
 
-      const presentDays = recentAttendance.filter(record => record.present_status === 'present').length;
-      const monthlyAttendance = recentAttendance.length > 0 ? (presentDays / recentAttendance.length) * 100 : 0;
+        const presentDays = recentAttendance.filter(record => record.present_status === 'present').length;
+        monthlyAttendance = recentAttendance.length > 0 ? (presentDays / recentAttendance.length) * 100 : 0;
+        console.log('📅 [StudentDashboard] Attendance loaded:', monthlyAttendance + '%');
+      } catch (error) {
+        console.warn('⚠️ [StudentDashboard] Failed to load attendance:', error);
+        // Continue with default value of 0
+      }
 
       // Load leaves
-      const leaves = await LeaveService.getStudentLeaves(userData.id);
-      const currentYear = new Date().getFullYear();
-      const currentYearLeaves = leaves.filter(leave => 
-        new Date(leave.start_date).getFullYear() === currentYear
-      );
-      
-      const leaveDaysTaken = currentYearLeaves.reduce((total, leave) => {
+      let leaveDaysTaken = 0;
+      try {
+        const leaves = await LeaveService.getStudentLeaves(userData.id);
+        const currentYear = new Date().getFullYear();
+        const currentYearLeaves = leaves.filter(leave => 
+          new Date(leave.start_date).getFullYear() === currentYear
+        );
+        
+        leaveDaysTaken = currentYearLeaves.reduce((total, leave) => {
         const start = new Date(leave.start_date);
         const end = new Date(leave.end_date);
         const diffTime = Math.abs(end.getTime() - start.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        return total + diffDays;
-      }, 0);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+          return total + diffDays;
+        }, 0);
+        console.log('🏖️ [StudentDashboard] Leaves loaded, days taken:', leaveDaysTaken);
+      } catch (error) {
+        console.warn('⚠️ [StudentDashboard] Failed to load leaves:', error);
+        // Continue with default value of 0
+      }
 
-      setStats({
+      const finalStats = {
         todayGoal,
         todayReflection,
         weeklyAttendance: monthlyAttendance, // Simplified
@@ -130,7 +163,9 @@ const StudentDashboard: React.FC = () => {
         leavesRemaining: Math.max(0, 12 - leaveDaysTaken),
         recentGoals,
         averageAchievement: Math.round(averageAchievement)
-      });
+      };
+      console.log('✅ [StudentDashboard] Final stats:', finalStats);
+      setStats(finalStats);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -252,7 +287,10 @@ const StudentDashboard: React.FC = () => {
               <div className="text-center py-8">
                 <Target className="mx-auto h-12 w-12 text-gray-400" />
                 <p className="mt-2 text-sm text-gray-500">No goal set for today</p>
-                <button className="mt-2 text-primary-600 hover:text-primary-700 text-sm font-medium">
+                <button 
+                  onClick={() => navigate('/goal-setting')}
+                  className="mt-2 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                >
                   Set a goal
                 </button>
               </div>
@@ -277,17 +315,106 @@ const StudentDashboard: React.FC = () => {
 
             {stats.todayReflection ? (
               <div className="space-y-3">
-                <p className="text-gray-700 line-clamp-3">{stats.todayReflection.reflection_text}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Achieved: {stats.todayReflection.achieved_percentage}%</span>
-                  <span className="text-sm text-gray-500">
-                    {new Date(stats.todayReflection.created_at).toLocaleTimeString()}
+                {/* Achievement Progress Bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">Achievement</span>
+                    <span className="text-lg font-bold text-primary-600">{stats.todayReflection.achieved_percentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${stats.todayReflection.achieved_percentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Reflection Preview */}
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">⭐ What worked well</p>
+                    <p className={`text-sm text-gray-900 ${!expandedReflection ? 'line-clamp-2' : ''}`}>
+                      {stats.todayReflection.reflection_answers.workedWell}
+                    </p>
+                  </div>
+
+                  {expandedReflection && (
+                    <>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">🤝 How I achieved this</p>
+                        <p className="text-sm text-gray-900">{stats.todayReflection.reflection_answers.howAchieved}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">💡 Key learning</p>
+                        <p className="text-sm text-gray-900">{stats.todayReflection.reflection_answers.keyLearning}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">🚀 Challenges & improvements</p>
+                        <p className="text-sm text-gray-900">{stats.todayReflection.reflection_answers.challenges}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Expand/Collapse Button */}
+                <button
+                  onClick={() => setExpandedReflection(!expandedReflection)}
+                  className="flex items-center space-x-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  <span>{expandedReflection ? 'Show Less' : 'Show More'}</span>
+                  {expandedReflection ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+
+                <div className="pt-3 border-t border-gray-200">
+                  <span className="text-xs text-gray-500">
+                    Submitted at {new Date(stats.todayReflection.created_at).toLocaleTimeString()}
                   </span>
                 </div>
+
+                {/* Mentor Feedback Section */}
                 {stats.todayReflection.mentor_notes && (
-                  <div className="mt-3 p-3 bg-blue-50 rounded-md">
-                    <p className="text-sm font-medium text-blue-800">Mentor Feedback</p>
-                    <p className="text-sm text-blue-700">{stats.todayReflection.mentor_notes}</p>
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start space-x-3">
+                      <div className="p-1.5 bg-blue-100 rounded-full">
+                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm font-semibold text-blue-900">Mentor Feedback</p>
+                          {stats.todayReflection.mentor_assessment && (
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                              stats.todayReflection.mentor_assessment === 'exceeds_expectations' ? 'bg-green-100 text-green-700' :
+                              stats.todayReflection.mentor_assessment === 'on_track' ? 'bg-blue-100 text-blue-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {stats.todayReflection.mentor_assessment === 'exceeds_expectations' && <><Star className="h-3 w-3 inline mr-1" />Exceeds Expectations</>}
+                              {stats.todayReflection.mentor_assessment === 'on_track' && <><CheckCircle className="h-3 w-3 inline mr-1" />On Track</>}
+                              {stats.todayReflection.mentor_assessment === 'needs_improvement' && <><AlertCircle className="h-3 w-3 inline mr-1" />Needs Improvement</>}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-blue-800">{stats.todayReflection.mentor_notes}</p>
+                        {stats.todayReflection.feedback_given_at && (
+                          <p className="text-xs text-blue-600 mt-2">
+                            Reviewed on {new Date(stats.todayReflection.feedback_given_at).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Waiting for Feedback */}
+                {!stats.todayReflection.mentor_notes && stats.todayReflection.status === 'pending' && (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-yellow-600" />
+                    <p className="text-sm text-yellow-800">Waiting for mentor review...</p>
                   </div>
                 )}
               </div>
@@ -295,7 +422,10 @@ const StudentDashboard: React.FC = () => {
               <div className="text-center py-8">
                 <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
                 <p className="mt-2 text-sm text-gray-500">No reflection submitted yet</p>
-                <button className="mt-2 text-primary-600 hover:text-primary-700 text-sm font-medium">
+                <button 
+                  onClick={() => navigate('/goal-setting')}
+                  className="mt-2 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                >
                   Submit reflection
                 </button>
               </div>

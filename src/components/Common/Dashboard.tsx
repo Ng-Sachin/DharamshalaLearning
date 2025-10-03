@@ -17,17 +17,13 @@ const Dashboard: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirect based on user role
-  switch (userData.role) {
-    case 'student':
-      return <Navigate to="/student/dashboard" replace />;
-    case 'mentor':
-      return <Navigate to="/mentor/dashboard" replace />;
-    case 'admin':
-      return <Navigate to="/admin/dashboard" replace />;
-    default:
-      return <Navigate to="/unauthorized" replace />;
+  // Redirect based on admin status
+  if (userData.isAdmin) {
+    return <Navigate to="/admin/dashboard" replace />;
   }
+  
+  // For non-admin users, redirect to student dashboard by default
+  return <Navigate to="/student/dashboard" replace />;
 };
 
 export default Dashboard;

@@ -274,7 +274,24 @@ const MenteeReview: React.FC = () => {
                             {new Date(reflection.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <p className="text-gray-900 mb-2">{reflection.reflection_text}</p>
+                        <div className="space-y-3 text-sm text-gray-900">
+                          <div>
+                            <p className="font-medium text-gray-700">What worked well:</p>
+                            <p>{reflection.reflection_answers.workedWell}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-700">How achieved:</p>
+                            <p>{reflection.reflection_answers.howAchieved}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-700">Key learning:</p>
+                            <p>{reflection.reflection_answers.keyLearning}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-700">Challenges:</p>
+                            <p>{reflection.reflection_answers.challenges}</p>
+                          </div>
+                        </div>
                         <div className="text-sm text-gray-600 mb-2">
                           Achieved: {reflection.achieved_percentage}%
                         </div>

@@ -1,17 +1,17 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { UserRole } from '../../types';
+
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRoles?: UserRole[];
+  requireAdmin?: boolean;
   redirectTo?: string;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  requiredRoles = [],
+  requireAdmin = false,
   redirectTo = '/login'
 }) => {
   const { currentUser, userData, loading } = useAuth();
@@ -31,8 +31,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // Check role permissions if specified
-  if (requiredRoles.length > 0 && !requiredRoles.includes(userData.role)) {
+  // Check admin access if required
+  if (requireAdmin && !userData.isAdmin) {
     return <Navigate to="/unauthorized" replace />;
   }
 

@@ -16,7 +16,28 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { User, UserRole } from '../types';
+import { User } from '../types';
+
+// Utility function to convert Firestore Timestamps to JavaScript Dates
+function convertTimestampsToDates(obj: any): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (obj instanceof Timestamp) {
+    return obj.toDate();
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(convertTimestampsToDates);
+  }
+
+  const converted: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    converted[key] = convertTimestampsToDates(value);
+  }
+  return converted;
+}
 
 // Collection names
 export const COLLECTIONS = {
@@ -50,7 +71,7 @@ export class FirestoreService {
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...convertTimestampsToDates(doc.data())
       })) as T[];
     } catch (error) {
       console.error(`Error in compound query for ${collectionName}:`, error);
@@ -94,7 +115,7 @@ export class FirestoreService {
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as T;
+        return { id: docSnap.id, ...convertTimestampsToDates(docSnap.data()) } as T;
       }
       return null;
     } catch (error) {
@@ -127,7 +148,7 @@ export class FirestoreService {
       
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...convertTimestampsToDates(doc.data())
       })) as T[];
     } catch (error) {
       console.error(`Error getting documents from ${collectionName}:`, error);
@@ -156,7 +177,7 @@ export class FirestoreService {
       
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...convertTimestampsToDates(doc.data())
       })) as T[];
     } catch (error) {
       console.error(`Error querying documents from ${collectionName}:`, error);
@@ -252,12 +273,39 @@ export class UserService extends FirestoreService {
     return users.length > 0 ? users[0] : null;
   }
 
-  static async getUsersByRole(role: UserRole): Promise<User[]> {
-    return this.getWhere<User>(COLLECTIONS.USERS, 'role', '==', role);
+  static async getAdminUsers(): Promise<User[]> {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('isAdmin', '==', true));
+    const querySnapshot = await getDocs(q);
+    const users: User[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      users.push(convertTimestampsToDates({
+        id: doc.id,
+        ...doc.data()
+      }) as User);
+    });
+    
+    return users;
   }
 
   static async getStudentsByMentor(mentorId: string): Promise<User[]> {
-    return this.getWhere<User>(COLLECTIONS.USERS, 'mentor_id', '==', mentorId);
+    const q = query(
+      collection(db, COLLECTIONS.USERS),
+      where('mentor_id', '==', mentorId),
+      where('mentor_id', '==', mentorId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...convertTimestampsToDates(doc.data())
+    })) as User[];
+  }
+
+  // For student-mentors - same implementation as getStudentsByMentor
+  static async getStudentsByStudentMentor(mentorId: string): Promise<User[]> {
+    return this.getStudentsByMentor(mentorId);
   }
 
   static async getStudentsWithoutMentor(): Promise<User[]> {

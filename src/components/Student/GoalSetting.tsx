@@ -4,11 +4,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { 
   PhaseService, 
   TopicService, 
-  GoalService 
+  GoalService,
+  ReflectionService
 } from '../../services/dataServices';
 import { DataSeedingService } from '../../services/dataSeedingService';
-import { Phase, Topic, DailyGoal, GoalFormData } from '../../types';
+import { Phase, Topic, DailyGoal, DailyReflection, GoalFormData } from '../../types';
 import { goalTemplates, achievementLevels, getTopicDetails, TopicDetails } from '../../data/initialData';
+import DailyReflectionForm from './DailyReflectionForm';
 import { 
   Target, 
   TrendingUp, 
@@ -28,6 +30,7 @@ const GoalSetting: React.FC = () => {
   const [phases, setPhases] = useState<Phase[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [todaysGoal, setTodaysGoal] = useState<DailyGoal | null>(null);
+  const [todaysReflection, setTodaysReflection] = useState<DailyReflection | null>(null);
   const [formData, setFormData] = useState<GoalFormData>({
     phase_id: '',
     topic_id: '',
@@ -65,6 +68,12 @@ const GoalSetting: React.FC = () => {
 
       setPhases(phasesData);
       setTodaysGoal(goalData);
+
+      // If there's a goal, check for reflection
+      if (goalData) {
+        const reflectionData = await ReflectionService.getReflectionByGoal(goalData.id);
+        setTodaysReflection(reflectionData);
+      }
 
       // If there's already a goal for today, populate the form
       if (goalData) {
@@ -233,6 +242,14 @@ const GoalSetting: React.FC = () => {
       setError('Failed to save goal. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReflectionSubmit = async () => {
+    // Reload reflection data after submission
+    if (todaysGoal) {
+      const reflectionData = await ReflectionService.getReflectionByGoal(todaysGoal.id);
+      setTodaysReflection(reflectionData);
     }
   };
 
@@ -539,6 +556,35 @@ const GoalSetting: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Daily Reflection Form - Show only if goal exists and no reflection yet */}
+        {todaysGoal && !todaysReflection && userData && (
+          <div className="mt-6">
+            <DailyReflectionForm 
+              goal={todaysGoal}
+              studentId={userData.id}
+              onSubmitSuccess={handleReflectionSubmit}
+            />
+          </div>
+        )}
+
+        {/* Show reflection submitted message if reflection exists */}
+        {todaysGoal && todaysReflection && (
+          <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-6">
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+              <div>
+                <h3 className="text-lg font-semibold text-green-900">Reflection Submitted</h3>
+                <p className="text-sm text-green-700">
+                  You've already submitted your reflection for today's goal.
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  Status: <span className="font-medium capitalize">{todaysReflection.status}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

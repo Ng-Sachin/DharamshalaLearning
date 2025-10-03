@@ -73,6 +73,7 @@ export class GoalService extends FirestoreService {
   }
 
   static async getGoalsByStudent(studentId: string, limit?: number): Promise<DailyGoal[]> {
+    console.log('🔍 [GoalService] getGoalsByStudent - studentId:', studentId);
     // Get goals without ordering to avoid composite index requirement
     const goals = await this.getWhere<DailyGoal>(
       COLLECTIONS.DAILY_GOALS,
@@ -80,16 +81,34 @@ export class GoalService extends FirestoreService {
       '==',
       studentId
     );
+    console.log('🔍 [GoalService] Raw goals from Firestore:', goals.length, 'goals');
+    goals.forEach((goal, index) => {
+      console.log(`  Goal ${index + 1}:`, {
+        id: goal.id,
+        created_at: goal.created_at,
+        created_at_type: typeof goal.created_at,
+        goal_text: goal.goal_text?.substring(0, 50) + '...'
+      });
+    });
 
     // Sort by created_at desc client-side
-    return goals.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    const sorted = goals.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    console.log('🔍 [GoalService] Sorted goals:', sorted.length);
+    return sorted;
   }
 
   static async getTodaysGoal(studentId: string): Promise<DailyGoal | null> {
+    console.log('📅 [GoalService] getTodaysGoal - studentId:', studentId);
     // Get start and end of today in UTC
     const now = new Date();
     const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
     const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+
+    console.log('📅 [GoalService] Date range:', {
+      now: now.toISOString(),
+      startOfDay: startOfDay.toISOString(),
+      endOfDay: endOfDay.toISOString()
+    });
 
     // Firestore Timestamp
     const { Timestamp } = await import('firebase/firestore');
@@ -98,6 +117,7 @@ export class GoalService extends FirestoreService {
 
     // Get all goals for the student (uses single-field index)
     const allGoals = await this.getGoalsByStudent(studentId);
+    console.log('📅 [GoalService] Total goals for student:', allGoals.length);
 
     // Filter for today's goals client-side
     const todaysGoals = allGoals.filter(goal => {
@@ -106,10 +126,25 @@ export class GoalService extends FirestoreService {
       const goalTime = goalTimestamp.toMillis ? goalTimestamp.toMillis() : goalTimestamp.getTime();
       const startTime = startTimestamp.toMillis();
       const endTime = endTimestamp.toMillis();
-      return goalTime >= startTime && goalTime < endTime;
+      const isToday = goalTime >= startTime && goalTime < endTime;
+      
+      console.log('📅 [GoalService] Checking goal:', {
+        goalId: goal.id,
+        goalTime: new Date(goalTime).toISOString(),
+        startTime: new Date(startTime).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        isToday,
+        goalText: goal.goal_text?.substring(0, 30)
+      });
+      
+      return isToday;
     });
+    
+    console.log('📅 [GoalService] Today\'s goals found:', todaysGoals.length);
+    const result = todaysGoals.length > 0 ? todaysGoals[0] : null;
+    console.log('📅 [GoalService] Returning today\'s goal:', result ? { id: result.id, text: result.goal_text?.substring(0, 50) } : 'null');
 
-    return todaysGoals.length > 0 ? todaysGoals[0] : null;
+    return result;
   }
 // Add compound query support to FirestoreService
 
@@ -146,19 +181,20 @@ export class GoalService extends FirestoreService {
 
 // Daily Reflection Service
 export class ReflectionService extends FirestoreService {
-  static async createReflection(reflectionData: Omit<DailyReflection, 'id'>): Promise<string> {
-    return this.create<DailyReflection>(COLLECTIONS.DAILY_REFLECTIONS, reflectionData);
+  static async createReflection(reflectionData: Omit<DailyReflection, 'id' | 'created_at'>): Promise<string> {
+    return this.create<DailyReflection>(COLLECTIONS.DAILY_REFLECTIONS, reflectionData as any);
   }
 
   static async getReflectionsByStudent(studentId: string): Promise<DailyReflection[]> {
-    return this.getWhere<DailyReflection>(
+    // Get without ordering to avoid composite index requirement
+    const reflections = await this.getWhere<DailyReflection>(
       COLLECTIONS.DAILY_REFLECTIONS,
       'student_id',
       '==',
-      studentId,
-      'created_at',
-      'desc'
+      studentId
     );
+    // Sort by created_at desc client-side
+    return reflections.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
   }
 
   static async getReflectionByGoal(goalId: string): Promise<DailyReflection | null> {
@@ -188,13 +224,27 @@ export class ReflectionService extends FirestoreService {
     id: string,
     reviewerId: string,
     status: 'approved' | 'reviewed',
-    mentorNotes?: string
+    mentorNotes?: string,
+    mentorAssessment?: 'needs_improvement' | 'on_track' | 'exceeds_expectations'
   ): Promise<void> {
-    return this.updateReflection(id, {
+    const updateData: Partial<DailyReflection> = {
       status,
       reviewed_by: reviewerId,
       reviewed_at: new Date(),
+      feedback_given_at: new Date(),
       mentor_notes: mentorNotes
+    };
+    
+    if (mentorAssessment) {
+      updateData.mentor_assessment = mentorAssessment;
+    }
+    
+    return this.updateReflection(id, updateData);
+  }
+
+  static async markReflectionAsRead(id: string): Promise<void> {
+    return this.updateReflection(id, {
+      is_read_by_student: true
     });
   }
 }
@@ -206,14 +256,15 @@ export class PairProgrammingService extends FirestoreService {
   }
 
   static async getRequestsByStudent(studentId: string): Promise<PairProgrammingRequest[]> {
-    return this.getWhere<PairProgrammingRequest>(
+    // Get without ordering to avoid composite index requirement
+    const requests = await this.getWhere<PairProgrammingRequest>(
       COLLECTIONS.PAIR_PROGRAMMING_REQUESTS,
       'student_id',
       '==',
-      studentId,
-      'created_at',
-      'desc'
+      studentId
     );
+    // Sort by created_at desc client-side
+    return requests.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
   }
 
   static async getPendingRequests(): Promise<PairProgrammingRequest[]> {

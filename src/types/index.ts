@@ -1,13 +1,10 @@
-// User role types
-export type UserRole = 'student' | 'mentor' | 'admin';
-
 // User interface
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
-  mentor_id?: string; // Only for students
+  isAdmin?: boolean;    // Only used for admin-specific features
+  mentor_id?: string;   // ID of assigned mentor if student
   skills?: string[];
   created_at: Date;
   updated_at: Date;
@@ -57,13 +54,23 @@ export interface DailyReflection {
   id: string;
   student_id: string;
   goal_id: string;
-  reflection_text: string;
+  phase_id: string;
+  topic_id: string;
+  reflection_answers: {
+    workedWell: string;      // What worked well for you today? What were you able to achieve?
+    howAchieved: string;     // How did you achieve this, and who supported you?
+    keyLearning: string;     // What was your special learning from today's task?
+    challenges: string;      // What challenges did you face, and what would you need to make it better?
+  };
   achieved_percentage: number;
   status: 'pending' | 'reviewed' | 'approved';
   mentor_notes?: string;
+  mentor_assessment?: 'needs_improvement' | 'on_track' | 'exceeds_expectations';
+  is_read_by_student?: boolean;
   created_at: Date;
   reviewed_at?: Date;
   reviewed_by?: string;
+  feedback_given_at?: Date;
 }
 
 // Pair programming request interface
@@ -163,11 +170,6 @@ export interface GoalFormData {
   target_percentage: number;
 }
 
-export interface ReflectionFormData {
-  reflection_text: string;
-  achieved_percentage: number;
-}
-
 export interface PairProgrammingFormData {
   topic: string;
   description?: string;
@@ -194,5 +196,68 @@ export interface NavItem {
   label: string;
   path: string;
   icon?: string;
-  roles: UserRole[];
+  adminOnly?: boolean;
+}
+
+// Admin reporting interfaces
+export interface PhaseProgress {
+  phase_id: string;
+  phase_name: string;
+  goals_count: number;
+  reflections_count: number;
+  average_achievement: number;
+  duration_days: number;
+  topics_covered: number;
+  total_topics: number;
+  status: 'completed' | 'in_progress' | 'not_started';
+  start_date: Date;
+  end_date?: Date;
+}
+
+export interface StudentReport {
+  student_id: string;
+  student_name: string;
+  student_email: string;
+  mentor_id?: string;
+  mentor_name?: string;
+  current_phase_id?: string;
+  current_phase_name?: string;
+  
+  // Aggregated stats
+  total_goals: number;
+  total_reflections: number;
+  reflection_submission_rate: number; // percentage
+  average_achievement: number;
+  mentor_feedback_rate: number;
+  
+  // Phase-wise breakdown
+  phase_progress: PhaseProgress[];
+  
+  // Recent activity
+  recent_goals: DailyGoal[];
+  recent_reflections: DailyReflection[];
+  
+  // Insights
+  strengths: string[];
+  improvement_areas: string[];
+  recurring_challenges: string[];
+  
+  // Additional metrics
+  attendance_rate: number;
+  pair_programming_sessions: number;
+  leaves_taken: number;
+  
+  generated_at: Date;
+}
+
+// Mentor dashboard interfaces
+export interface MenteeOverview {
+  student: User;
+  pending_goals: number;
+  pending_reflections: number;
+  latest_goal?: DailyGoal;
+  latest_reflection?: DailyReflection;
+  average_achievement: number;
+  current_phase?: string;
+  current_topic?: string;
 }

@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebase';
 import { UserService } from './firestore';
-import { User, UserRole } from '../types';
+import { User } from '../types';
 
 export class AuthService {
   private static googleProvider: GoogleAuthProvider;
@@ -84,7 +84,7 @@ export class AuthService {
       await UserService.createUserWithId(firebaseUser.uid, {
         name: firebaseUser.displayName || 'User',
         email: firebaseUser.email!,
-        role: 'student', // Default role, can be changed by admin later
+        isAdmin: false,
         skills: [],
         created_at: new Date(),
         updated_at: new Date()
@@ -123,21 +123,9 @@ export class AuthService {
     return onAuthStateChanged(auth, callback);
   }
 
-  // Check if user has required role
-  static async hasRole(requiredRole: UserRole): Promise<boolean> {
+  // Check if user is admin
+  static async isAdmin(): Promise<boolean> {
     const userData = await this.getCurrentUserData();
-    return userData?.role === requiredRole;
-  }
-
-  // Check if user has any of the required roles
-  static async hasAnyRole(requiredRoles: UserRole[]): Promise<boolean> {
-    const userData = await this.getCurrentUserData();
-    return userData ? requiredRoles.includes(userData.role) : false;
-  }
-
-  // Get current user's role
-  static async getCurrentUserRole(): Promise<UserRole | null> {
-    const userData = await this.getCurrentUserData();
-    return userData?.role || null;
+    return userData?.isAdmin || false;
   }
 }

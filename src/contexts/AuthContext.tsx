@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { AuthService } from '../services/auth';
-import { User, UserRole } from '../types';
+import { User } from '../types';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -9,8 +9,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<FirebaseUser>;
   signOut: () => Promise<void>;
-  hasRole: (role: UserRole) => boolean;
-  hasAnyRole: (roles: UserRole[]) => boolean;
+  isAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,14 +77,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await AuthService.signOut();
   };
 
-  // Check if user has specific role
-  const hasRole = (role: UserRole): boolean => {
-    return userData?.role === role;
-  };
-
-  // Check if user has any of the specified roles
-  const hasAnyRole = (roles: UserRole[]): boolean => {
-    return userData ? roles.includes(userData.role) : false;
+  // Check if user is admin
+  const isAdmin = (): boolean => {
+    return userData?.isAdmin || false;
   };
 
   const value: AuthContextType = {
@@ -94,8 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     signInWithGoogle,
     signOut,
-    hasRole,
-    hasAnyRole
+    isAdmin
   };
 
   return (

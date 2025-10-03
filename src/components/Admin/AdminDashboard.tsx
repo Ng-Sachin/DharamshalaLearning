@@ -7,9 +7,9 @@ import {
   AlertCircle,
   BookOpen,
   Users,
-  Target
+  Target,
+  UserCog
 } from 'lucide-react';
-
 const AdminDashboard: React.FC = () => {
   const [dataStatus, setDataStatus] = useState({ phasesCount: 0, topicsCount: 0, isSeeded: false });
   const [isSeeding, setIsSeeding] = useState(false);
@@ -89,6 +89,26 @@ const AdminDashboard: React.FC = () => {
             <span>{error}</span>
           </div>
         )}
+
+        {/* Database Operations */}
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Database Operations</h2>
+          <div className="flex space-x-4">
+            {/* Existing Seed Data Button */}
+            <button
+              onClick={handleSeedData}
+              disabled={isSeeding}
+              className={`flex items-center space-x-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                isSeeding ? 'bg-primary-400' : 'bg-primary-600 hover:bg-primary-700'
+              }`}
+            >
+              <Database className="h-5 w-5" />
+              <span>{isSeeding ? 'Seeding Data...' : 'Seed Initial Data'}</span>
+            </button>
+
+
+          </div>
+        </div>
 
         {/* Data Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
