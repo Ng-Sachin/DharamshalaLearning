@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { UserService } from '../../services/firestore';
 import { 
   Home,
   Target,
@@ -14,7 +15,8 @@ import {
   ChevronDown,
   Calendar,
   Mail,
-  UserCircle
+  UserCircle,
+  Building
 } from 'lucide-react';
 
 interface NavItem {
@@ -61,7 +63,7 @@ const Navigation: React.FC<NavigationProps> = ({
   isMobileMenuOpen,
   setIsMobileMenuOpen
 }) => {
-  const { userData, signOut } = useAuth();
+  const { userData, setUserData, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -393,6 +395,45 @@ const Navigation: React.FC<NavigationProps> = ({
                           })
                         : 'N/A'}
                     </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <Building size={20} className="text-gray-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-500 uppercase">House</p>
+                    <select
+                      value={userData?.house || ''}
+                      onChange={async (e) => {
+                        const newHouse = e.target.value as 'Bageshree' | 'Malhar' | 'Bhairav' | '';
+                        console.log('Updating house to:', newHouse);
+                        if (userData) {
+                          console.log('Current user data:', userData);
+                          try {
+                            await UserService.updateUser(userData.id, {
+                              house: newHouse || undefined
+                            });
+                            console.log('Update successful, updating local state');
+                            // Update local state to show the change immediately
+                            setUserData({
+                              ...userData,
+                              house: newHouse || undefined
+                            });
+                          } catch (error) {
+                            console.error('Error updating house:', error);
+                            alert('Failed to update house. Please try again.');
+                          }
+                        } else {
+                          console.error('No user data available');
+                        }
+                      }}
+                      className="mt-1 block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md"
+                    >
+                      <option value="">Select House</option>
+                      {['Bageshree', 'Malhar', 'Bhairav'].map(house => (
+                        <option key={house} value={house}>{house}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
