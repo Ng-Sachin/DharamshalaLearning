@@ -1,36 +1,49 @@
-# CORS Error Fix for Google Sign-In
+# Cross-Origin-Opener-Policy (COOP) Error Fix for Google Sign-In
 
 ## Problem
-Some users experienced cross-origin (CORS) errors when trying to sign in with Google, preventing them from accessing the application.
+Users experienced this specific error when trying to sign in with Google:
+```
+Cross-Origin-Opener-Policy policy would block the window.closed call.
+```
 
-## Root Causes
+This prevented the OAuth popup from communicating back to the main application window.
 
-### 1. Missing CORS Headers
-Firebase Hosting wasn't configured with proper CORS headers, which could cause issues with:
-- Google OAuth popup windows
-- API requests from different origins
-- Cross-domain cookie handling
+## Root Cause
 
-### 2. Popup Blocked/CORS Issues
-Some browsers or network configurations block OAuth popups, causing sign-in failures.
+### Cross-Origin-Opener-Policy (COOP) Blocking Popups
 
-### 3. Missing Redirect Fallback
-The app only used popup-based sign-in without a fallback redirect method.
+The error occurs because:
+1. **COOP Header Missing**: Firebase Hosting didn't have the proper COOP header configured
+2. **Popup Communication Blocked**: Browser security policy blocked the popup window from communicating with the parent window
+3. **OAuth Flow Interrupted**: Google OAuth popup couldn't send the authentication result back
+
+**Technical Details:**
+- Modern browsers enforce strict Cross-Origin-Opener-Policy
+- OAuth popups need `same-origin-allow-popups` to communicate with parent window
+- Without this header, `window.closed` checks fail, breaking the OAuth flow
 
 ---
 
 ## Solutions Implemented
 
-### 1. ✅ Added CORS Headers to Firebase Hosting
+### 1. ✅ Added Cross-Origin-Opener-Policy Header (KEY FIX!)
 
 **File Modified:** `firebase.json`
 
-Added comprehensive CORS headers:
+Added the critical COOP header to allow OAuth popups:
 ```json
 "headers": [
   {
     "source": "**",
     "headers": [
+      {
+        "key": "Cross-Origin-Opener-Policy",
+        "value": "same-origin-allow-popups"
+      },
+      {
+        "key": "Cross-Origin-Embedder-Policy",
+        "value": "unsafe-none"
+      },
       {
         "key": "Access-Control-Allow-Origin",
         "value": "*"
@@ -42,24 +55,22 @@ Added comprehensive CORS headers:
       {
         "key": "Access-Control-Allow-Headers",
         "value": "Content-Type, Authorization"
-      },
-      {
-        "key": "X-Frame-Options",
-        "value": "SAMEORIGIN"
-      },
-      {
-        "key": "X-Content-Type-Options",
-        "value": "nosniff"
       }
     ]
   }
 ]
 ```
 
-**Benefits:**
-- Allows cross-origin requests properly
-- Prevents CORS-related sign-in failures
-- Maintains security with frame options
+**What this fixes:**
+- ✅ `Cross-Origin-Opener-Policy: same-origin-allow-popups` - Allows OAuth popups to communicate back
+- ✅ `Cross-Origin-Embedder-Policy: unsafe-none` - Prevents embedding issues
+- ✅ Standard CORS headers for API requests
+
+**Why this works:**
+- `same-origin-allow-popups` allows popup windows to retain reference to parent
+- OAuth popup can now send authentication result back to main window
+- `window.closed` checks work properly
+- Firebase Auth can complete the sign-in flow
 
 ---
 
