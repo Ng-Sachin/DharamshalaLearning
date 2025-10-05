@@ -229,14 +229,14 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">All Campuses</option>
+                  <option value="Dantewada">Dantewada</option>
                   <option value="Dharamshala">Dharamshala</option>
-                  <option value="Ambala">Ambala</option>
-                  <option value="Chandigarh">Chandigarh</option>
-                  <option value="Dehradun">Dehradun</option>
-                  <option value="Sangrur">Sangrur</option>
-                  <option value="Firozpur">Firozpur</option>
-                  <option value="Bathinda">Bathinda</option>
-                  <option value="Moga">Moga</option>
+                  <option value="Eternal">Eternal</option>
+                  <option value="Jashpur">Jashpur</option>
+                  <option value="Kishanganj">Kishanganj</option>
+                  <option value="Pune">Pune</option>
+                  <option value="Raigarh">Raigarh</option>
+                  <option value="Sarjapura">Sarjapura</option>
                 </select>
               </div>
 
@@ -251,9 +251,9 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">All Houses</option>
-                  <option value="Red">Red</option>
-                  <option value="Blue">Blue</option>
-                  <option value="Yellow">Yellow</option>
+                  <option value="Bageshree">Bageshree</option>
+                  <option value="Malhar">Malhar</option>
+                  <option value="Bhairav">Bhairav</option>
                 </select>
               </div>
 

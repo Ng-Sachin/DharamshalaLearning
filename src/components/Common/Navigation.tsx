@@ -17,33 +17,47 @@ import {
   Calendar,
   Mail,
   UserCircle,
-  Building
+  Building,
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 
+import BugFeatureModal from './BugFeatureModal';
+import WhatsNewModal from './WhatsNewModal';
+import { useFeaturesManifest } from '../../hooks/useFeaturesManifest';
+
 interface NavItem {
-  label: string;
-  path: string;
-  icon: React.ComponentType<any>;
-  adminOnly?: boolean;
-  mobileLabel?: string;
-  notificationCount?: number;
+  label: string
+  mobileLabel: string
+  path: string
+  icon: React.ComponentType<{ className?: string }>
+  notificationCount?: number
+  comingSoon?: boolean
 }
 
-interface NavigationProps {
-  isMobileMenuOpen: boolean;
-  setIsMobileMenuOpen: (open: boolean) => void;
-}
-
-const Navigation: React.FC<NavigationProps> = ({
-  isMobileMenuOpen,
-  setIsMobileMenuOpen
-}) => {
-  const { userData, setUserData, signOut } = useAuth();
-  const [pendingCount, setPendingCount] = useState(0);
+export default function Navigation() {
+  const { user, userData, login, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
+  const [showBugModal, setShowBugModal] = useState(false);
+  const { shouldShowComingSoon, getWhatsNewFeatures } = useFeaturesManifest();  // Handle ESC key for modals
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showProfileModal) setShowProfileModal(false);
+        if (showBugModal) setShowBugModal(false);
+        if (showUserMenu) setShowUserMenu(false);
+        if (showWhatsNewModal) setShowWhatsNewModal(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [showProfileModal, showBugModal, showUserMenu, showWhatsNewModal]);
 
   // Fetch pending actions count
   useEffect(() => {
@@ -110,10 +124,10 @@ const Navigation: React.FC<NavigationProps> = ({
     <>
       {/* Top Navigation Bar - Desktop & Mobile */}
       <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo and Brand */}
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-4 lg:space-x-8">
               <div className="flex-shrink-0">
                 <Link to="/dashboard" className="flex items-center space-x-2">
                   <div className="w-8 h-8 flex items-center justify-center">
@@ -123,7 +137,7 @@ const Navigation: React.FC<NavigationProps> = ({
                       className="w-8 h-8 object-contain"
                     />
                   </div>
-                  <span className="hidden sm:block text-lg font-semibold text-gray-900">
+                  <span className="hidden sm:block text-base lg:text-lg font-semibold text-gray-900 truncate">
                     Campus Learning
                   </span>
                 </Link>
@@ -162,35 +176,77 @@ const Navigation: React.FC<NavigationProps> = ({
               {userData?.isAdmin && (
                 <button
                   onClick={() => navigate(isAdminSection ? '/student/dashboard' : '/admin/dashboard')}
-                  className="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors font-medium shadow-sm"
+                  className="hidden lg:flex items-center space-x-2 px-3 lg:px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors font-medium shadow-sm text-sm"
                 >
                   {isAdminSection ? (
                     <>
-                      <UserCircle size={18} />
-                      <span>Student View</span>
+                      <UserCircle size={16} />
+                      <span className="hidden xl:inline">Student View</span>
                     </>
                   ) : (
                     <>
-                      <Shield size={18} />
-                      <span>Admin View</span>
+                      <Shield size={16} />
+                      <span className="hidden xl:inline">Admin View</span>
                     </>
                   )}
                 </button>
               )}
               
               {/* Desktop User Menu */}
-              <div className="hidden md:flex items-center space-x-3 relative">
+              <div className="hidden md:flex items-center space-x-2 lg:space-x-3 relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
+                  className="flex items-center space-x-2 px-2 lg:px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-primary-700">
-                      {userData?.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center border border-gray-200">
+                    {userData?.email ? (
+                      <img 
+                        src={`https://www.google.com/s2/photos/profile/${userData.email.split('@')[0]}`}
+                        alt={userData.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to initials with house colors
+                          const target = e.target as HTMLImageElement;
+                          const container = target.parentElement!;
+                          container.innerHTML = `
+                            <div class="w-full h-full flex items-center justify-center ${
+                              userData?.house === 'Bageshree' ? 'bg-blue-100' :
+                              userData?.house === 'Bhairav' ? 'bg-orange-100' :
+                              userData?.house === 'Malhar' ? 'bg-green-100' :
+                              'bg-primary-100'
+                            }">
+                              <span class="text-sm font-medium ${
+                                userData?.house === 'Bageshree' ? 'text-blue-700' :
+                                userData?.house === 'Bhairav' ? 'text-orange-700' :
+                                userData?.house === 'Malhar' ? 'text-green-700' :
+                                'text-primary-700'
+                              }">
+                                ${userData?.name?.charAt(0)?.toUpperCase() || 'U'}
+                              </span>
+                            </div>
+                          `;
+                        }}
+                      />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center ${
+                        userData?.house === 'Bageshree' ? 'bg-blue-100' :
+                        userData?.house === 'Bhairav' ? 'bg-orange-100' :
+                        userData?.house === 'Malhar' ? 'bg-green-100' :
+                        'bg-primary-100'
+                      }`}>
+                        <span className={`text-sm font-medium ${
+                          userData?.house === 'Bageshree' ? 'text-blue-700' :
+                          userData?.house === 'Bhairav' ? 'text-orange-700' :
+                          userData?.house === 'Malhar' ? 'text-green-700' :
+                          'text-primary-700'
+                        }`}>
+                          {userData?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-sm text-left">
-                    <p className="font-medium text-gray-700">{userData?.name}</p>
+                  <div className="text-sm text-left hidden lg:block">
+                    <p className="font-medium text-gray-700 truncate max-w-24">{userData?.name}</p>
                     {userData?.isAdmin && (
                       <p className="text-xs text-gray-500">Admin</p>
                     )}
@@ -225,6 +281,30 @@ const Navigation: React.FC<NavigationProps> = ({
                         <User size={16} />
                         <span>View Profile</span>
                       </button>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowWhatsNewModal(true);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-purple-700 hover:bg-purple-50 flex items-center space-x-3"
+                      >
+                        <Sparkles size={16} />
+                        <span>What's New!</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowBugModal(true);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-blue-700 hover:bg-blue-50 flex items-center space-x-3"
+                      >
+                        <AlertCircle size={16} />
+                        <span>Report a bug/Feature</span>
+                      </button>
+      {/* Bug/Feature Report Modal */}
+      {showBugModal && (
+        <BugFeatureModal onClose={() => setShowBugModal(false)} />
+      )}
                       <button
                         onClick={() => {
                           setShowUserMenu(false);
@@ -375,8 +455,14 @@ const Navigation: React.FC<NavigationProps> = ({
 
       {/* Profile Modal */}
       {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowProfileModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
@@ -391,10 +477,38 @@ const Navigation: React.FC<NavigationProps> = ({
             
             <div className="p-6">
               <div className="flex flex-col items-center mb-6">
-                <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mb-3">
-                  <span className="text-3xl font-medium text-primary-700">
-                    {userData?.name?.charAt(0)?.toUpperCase() || 'U'}
-                  </span>
+                <div className="w-20 h-20 rounded-full flex items-center justify-center mb-3 overflow-hidden border-4 border-gray-200">
+                  {userData?.email ? (
+                    <img 
+                      src={`https://www.google.com/s2/photos/profile/${userData.email.split('@')[0]}`}
+                      alt={userData.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to initials with house colors
+                        const target = e.target as HTMLImageElement;
+                        const container = target.parentElement!;
+                        container.innerHTML = `
+                          <div class="w-full h-full flex items-center justify-center text-3xl font-medium text-white ${
+                            userData?.house === 'Bageshree' ? 'bg-blue-300' :
+                            userData?.house === 'Bhairav' ? 'bg-orange-300' :
+                            userData?.house === 'Malhar' ? 'bg-green-300' :
+                            'bg-primary-300'
+                          }">
+                            ${userData?.name?.charAt(0)?.toUpperCase() || 'U'}
+                          </div>
+                        `;
+                      }}
+                    />
+                  ) : (
+                    <div className={`w-full h-full flex items-center justify-center text-3xl font-medium text-white ${
+                      userData?.house === 'Bageshree' ? 'bg-blue-300' :
+                      userData?.house === 'Bhairav' ? 'bg-orange-300' :
+                      userData?.house === 'Malhar' ? 'bg-green-300' :
+                      'bg-primary-300'
+                    }`}>
+                      {userData?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                  )}
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900">{userData?.name}</h3>
                 {userData?.isAdmin && (
@@ -410,14 +524,6 @@ const Navigation: React.FC<NavigationProps> = ({
                   <div className="flex-1">
                     <p className="text-xs font-medium text-gray-500 uppercase">Email</p>
                     <p className="text-sm text-gray-900 mt-1">{userData?.email}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <UserCircle size={20} className="text-gray-600 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-500 uppercase">User ID</p>
-                    <p className="text-sm text-gray-900 mt-1 break-all">{userData?.id}</p>
                   </div>
                 </div>
 
@@ -483,6 +589,7 @@ const Navigation: React.FC<NavigationProps> = ({
                   </div>
                 </div>
 
+                {/* House selection */}
                 <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                   <Building size={20} className="text-gray-600 mt-0.5" />
                   <div className="flex-1">
@@ -491,14 +598,11 @@ const Navigation: React.FC<NavigationProps> = ({
                       value={userData?.house || ''}
                       onChange={async (e) => {
                         const newHouse = e.target.value as 'Bageshree' | 'Malhar' | 'Bhairav' | '';
-                        console.log('Updating house to:', newHouse);
                         if (userData) {
-                          console.log('Current user data:', userData);
                           try {
                             await UserService.updateUser(userData.id, {
                               house: newHouse || undefined
                             });
-                            console.log('Update successful, updating local state');
                             setUserData({
                               ...userData,
                               house: newHouse || undefined
@@ -507,8 +611,6 @@ const Navigation: React.FC<NavigationProps> = ({
                             console.error('Error updating house:', error);
                             alert('Failed to update house. Please try again.');
                           }
-                        } else {
-                          console.error('No user data available');
                         }
                       }}
                       className="mt-1 block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md"
@@ -556,6 +658,4 @@ const Navigation: React.FC<NavigationProps> = ({
       )}
     </>
   );
-};
-
-export default Navigation;
+}

@@ -9,6 +9,25 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Responsive utilities */
+@layer utilities {
+  .responsive-table {
+    @apply w-full overflow-x-auto;
+  }
+  
+  .responsive-table table {
+    @apply min-w-full;
+  }
+  
+  @media (max-width: 640px) {
+    .responsive-table td,
+    .responsive-table th {
+      @apply px-2 py-3 text-xs;
+    }
+  }
 }
 
 code {

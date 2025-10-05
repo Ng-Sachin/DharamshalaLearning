@@ -19,8 +19,9 @@ import {
   UserPlus,
   MessageSquare
 } from 'lucide-react';
+import BugReportAdminPanel from './BugReportAdminPanel';
 
-type TabType = 'overview' | 'users' | 'mentors' | 'super-mentors' | 'mentor-requests' | 'reports' | 'curriculum';
+type TabType = 'overview' | 'users' | 'mentors' | 'super-mentors' | 'mentor-requests' | 'reports' | 'curriculum' | 'bug-reports';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -77,6 +78,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'mentor-requests' as TabType, label: 'Mentor Requests', icon: UserPlus },
     { id: 'reports' as TabType, label: 'Reports', icon: BarChart3 },
     { id: 'curriculum' as TabType, label: 'Curriculum', icon: Database },
+    { id: 'bug-reports' as TabType, label: 'Bug Reports', icon: MessageSquare },
   ];
 
   if (loading) {
@@ -312,6 +314,12 @@ const AdminDashboard: React.FC = () => {
                   Detailed analytics and student reports will be available here
                 </p>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'bug-reports' && (
+            <div className="p-6">
+              <BugReportAdminPanel />
             </div>
           )}
         </div>

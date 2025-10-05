@@ -11,7 +11,7 @@ export interface User {
   max_mentees?: number;  // Override default limit (default: 2, super mentors: unlimited)
   skills?: string[];
   house?: 'Bageshree' | 'Malhar' | 'Bhairav';  // User's assigned house
-  campus?: 'Dantewada' | 'Dharamshala' | 'Eternal' | 'Jashpur' | 'Kishanganj' | 'Pune' | 'Raigarh' | 'Sarjapura';  // User's campus
+  campus?: 'Dantewada' | 'Dharamshala' | 'Eternal' | 'Jashpur' | 'Kishanganj' | 'Pune' | 'Raigarh' | 'Sarjapura' | 'Bageshree' | 'Malhar' | 'Bhairav';  // User's campus or house
   current_phase_id?: string;  // Current phase the user is on
   current_phase_name?: string;  // Denormalized phase name for display
   leave_from?: Date;  // Start date of leave period
