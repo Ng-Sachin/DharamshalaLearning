@@ -1,6 +1,6 @@
 {
-  "short_name": "Campus Learning",
-  "name": "Campus Learning Dashboard",
+  "short_name": "Learning App",
+  "name": "Learning App - Campus Dashboard",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,12 +8,12 @@
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
+      "src": "Logomini.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "logo512.png",
+      "src": "Logomini.png", 
       "type": "image/png",
       "sizes": "512x512"
     }

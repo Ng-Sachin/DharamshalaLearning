@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { MentorshipService } from '../../services/dataServices';
 import { MentorWithCapacity } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { MentorListSkeleton } from '../Common/SkeletonLoader';
 import { 
   X, 
   Star, 
@@ -13,7 +15,9 @@ import {
   Filter,
   Home,
   Building2,
-  BookOpen
+  BookOpen,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface MentorBrowserProps {
@@ -29,8 +33,10 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
   onClose,
   onRequestSubmitted
 }) => {
+  const { userData } = useAuth();
   const [mentors, setMentors] = useState<MentorWithCapacity[]>([]);
   const [filteredMentors, setFilteredMentors] = useState<MentorWithCapacity[]>([]);
+  const [paginatedMentors, setPaginatedMentors] = useState<MentorWithCapacity[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMentor, setSelectedMentor] = useState<string | null>(null);
   const [reason, setReason] = useState('');
@@ -38,29 +44,47 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   
-  // Filter states
+  // Filter states - Initialize with user's campus and house
   const [searchTerm, setSearchTerm] = useState('');
-  const [campusFilter, setCampusFilter] = useState<string>('all');
-  const [houseFilter, setHouseFilter] = useState<string>('all');
-  const [availabilityFilter, setAvailabilityFilter] = useState<string>('all'); // all, available, on-leave
+  const [campusFilter, setCampusFilter] = useState<string>(userData?.campus || 'all');
+  const [houseFilter, setHouseFilter] = useState<string>(userData?.house || 'all');
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Temporary filter states for mobile UX (to prevent immediate filtering)
+  const [tempCampusFilter, setTempCampusFilter] = useState<string>(userData?.campus || 'all');
+  const [tempHouseFilter, setTempHouseFilter] = useState<string>(userData?.house || 'all');
+  const [tempAvailabilityFilter, setTempAvailabilityFilter] = useState<string>('all');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     loadMentors();
+    // Initialize temp filters with current filter values
+    setTempCampusFilter(campusFilter);
+    setTempHouseFilter(houseFilter);
+    setTempAvailabilityFilter(availabilityFilter);
   }, []);
 
   useEffect(() => {
     applyFilters();
   }, [searchTerm, campusFilter, houseFilter, availabilityFilter, mentors]);
 
-  const loadMentors = async () => {
+  useEffect(() => {
+    paginateMentors();
+  }, [filteredMentors, currentPage]);  const loadMentors = async () => {
     try {
       setLoading(true);
       const allMentors = await MentorshipService.getAllMentorsWithCapacity();
       // Filter out the current student (can't be their own mentor)
       const filteredMentors = allMentors.filter(m => m.mentor.id !== currentStudentId);
-      // Sort by available slots (descending)
-      const sorted = filteredMentors.sort((a, b) => b.available_slots - a.available_slots);
+      // Sort by name alphabetically
+      const sorted = filteredMentors.sort((a, b) => 
+        a.mentor.name.localeCompare(b.mentor.name)
+      );
       setMentors(sorted);
     } catch (err) {
       console.error('Error loading mentors:', err);
@@ -119,6 +143,122 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
     }
 
     setFilteredMentors(filtered);
+    // Reset to first page when filters change
+    setCurrentPage(1);
+  };
+  
+  const paginateMentors = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginated = filteredMentors.slice(startIndex, endIndex);
+    setPaginatedMentors(paginated);
+    setTotalPages(Math.ceil(filteredMentors.length / itemsPerPage));
+  };
+  
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top of mentor list
+    document.getElementById('mentor-list')?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return (
+      <div className="flex justify-center items-center space-x-2 mt-8">
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-3 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+        >
+          <ChevronLeft size={16} />
+          <span>Previous</span>
+        </button>
+        
+        {startPage > 1 && (
+          <>
+            <button
+              onClick={() => handlePageChange(1)}
+              className="px-3 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              1
+            </button>
+            {startPage > 2 && <span className="text-gray-500">...</span>}
+          </>
+        )}
+        
+        {pages.map(page => (
+          <button
+            key={page}
+            onClick={() => handlePageChange(page)}
+            className={`px-3 py-2 rounded-md border text-sm font-medium ${
+              page === currentPage
+                ? 'border-primary-500 bg-primary-50 text-primary-600'
+                : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+            }`}
+          >
+            {page}
+          </button>
+        ))}
+        
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <span className="text-gray-500">...</span>}
+            <button
+              onClick={() => handlePageChange(totalPages)}
+              className="px-3 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+        
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="px-3 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+        >
+          <span>Next</span>
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    );
+  };
+
+  // Filter management functions for mobile UX
+  const handleApplyFilters = () => {
+    setCampusFilter(tempCampusFilter);
+    setHouseFilter(tempHouseFilter);
+    setAvailabilityFilter(tempAvailabilityFilter);
+    setCurrentPage(1); // Reset to first page when filters change
+    setShowFilters(false); // Close filter panel on mobile
+  };
+
+  const handleClearFilters = () => {
+    const defaultCampus = userData?.campus || 'all';
+    const defaultHouse = userData?.house || 'all';
+    setTempCampusFilter(defaultCampus);
+    setTempHouseFilter(defaultHouse);
+    setTempAvailabilityFilter('all');
+    setCampusFilter(defaultCampus);
+    setHouseFilter(defaultHouse);
+    setAvailabilityFilter('all');
+    setCurrentPage(1);
+    setShowFilters(false);
   };
 
   const handleRequestMentor = async () => {
@@ -217,60 +357,89 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
 
           {/* Filters */}
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-              {/* Campus Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Campus
-                </label>
-                <select
-                  value={campusFilter}
-                  onChange={(e) => setCampusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            <div className="bg-gray-50 rounded-lg overflow-hidden">
+              {/* Filter Header with Close Button (Mobile) */}
+              <div className="md:hidden flex justify-between items-center p-4 pb-2 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">Filter Mentors</h3>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <option value="">All Campuses</option>
-                  <option value="Dantewada">Dantewada</option>
-                  <option value="Dharamshala">Dharamshala</option>
-                  <option value="Eternal">Eternal</option>
-                  <option value="Jashpur">Jashpur</option>
-                  <option value="Kishanganj">Kishanganj</option>
-                  <option value="Pune">Pune</option>
-                  <option value="Raigarh">Raigarh</option>
-                  <option value="Sarjapura">Sarjapura</option>
-                </select>
+                  <X size={20} />
+                </button>
               </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+                {/* Campus Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Campus
+                  </label>
+                  <select
+                    value={tempCampusFilter}
+                    onChange={(e) => setTempCampusFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="">All Campuses</option>
+                    <option value="Dantewada">Dantewada</option>
+                    <option value="Dharamshala">Dharamshala</option>
+                    <option value="Eternal">Eternal</option>
+                    <option value="Jashpur">Jashpur</option>
+                    <option value="Kishanganj">Kishanganj</option>
+                    <option value="Pune">Pune</option>
+                    <option value="Raigarh">Raigarh</option>
+                    <option value="Sarjapura">Sarjapura</option>
+                  </select>
+                </div>
 
-              {/* House Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  House
-                </label>
-                <select
-                  value={houseFilter}
-                  onChange={(e) => setHouseFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">All Houses</option>
-                  <option value="Bageshree">Bageshree</option>
-                  <option value="Malhar">Malhar</option>
-                  <option value="Bhairav">Bhairav</option>
-                </select>
+                {/* House Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    House
+                  </label>
+                  <select
+                    value={tempHouseFilter}
+                    onChange={(e) => setTempHouseFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="">All Houses</option>
+                    <option value="Bageshree">Bageshree</option>
+                    <option value="Malhar">Malhar</option>
+                    <option value="Bhairav">Bhairav</option>
+                  </select>
+                </div>
+
+                {/* Availability Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Availability
+                  </label>
+                  <select
+                    value={tempAvailabilityFilter}
+                    onChange={(e) => setTempAvailabilityFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="all">All Mentors</option>
+                    <option value="available">Available (Not on Leave)</option>
+                    <option value="on-leave">On Leave</option>
+                  </select>
+                </div>
               </div>
-
-              {/* Availability Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Availability
-                </label>
-                <select
-                  value={availabilityFilter}
-                  onChange={(e) => setAvailabilityFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              
+              {/* Filter Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2 p-4 pt-2 bg-gray-100 border-t border-gray-200">
+                <button
+                  onClick={handleApplyFilters}
+                  className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
                 >
-                  <option value="all">All Mentors</option>
-                  <option value="available">Available (Not on Leave)</option>
-                  <option value="on-leave">On Leave</option>
-                </select>
+                  Apply Filters
+                </button>
+                <button
+                  onClick={handleClearFilters}
+                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm"
+                >
+                  Clear All
+                </button>
               </div>
             </div>
           )}
@@ -292,8 +461,8 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredMentors.map((mentorInfo) => {
+            <div id="mentor-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedMentors.map((mentorInfo) => {
                 const isCurrentMentor = mentorInfo.mentor.id === currentMentorId;
                 const hasSlots = mentorInfo.available_slots > 0;
                 const isSelected = selectedMentor === mentorInfo.mentor.id;
@@ -405,6 +574,13 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
                   </div>
                 );
               })}
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {filteredMentors.length > itemsPerPage && (
+            <div className="mt-6 flex justify-center">
+              {renderPagination()}
             </div>
           )}
         </div>

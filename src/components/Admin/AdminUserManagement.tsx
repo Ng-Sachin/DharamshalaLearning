@@ -1,23 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { AdminService } from '../../services/dataServices';
-import { User } from '../../types';
 import { 
   Users, 
-  Shield, 
+  Shield,
   ShieldOff, 
   Mail, 
   Calendar,
   Search,
   UserCheck,
-  AlertCircle
+  AlertCircle,
+  Trash2,
+  UserX,
+  CheckCircle,
+  XCircle,
+  Award,
+  Clock
 } from 'lucide-react';
+import AttendanceDashboard from './AttendanceDashboard';
 
 const AdminUserManagement: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'admin' | 'student' | 'no_mentor'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'admin' | 'student' | 'no_mentor' | 'inactive' | 'dropout' | 'placed'>('all');
   const [updating, setUpdating] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+  const [showStatusModal, setShowStatusModal] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave'>('active');
 
   useEffect(() => {
     loadUsers();
@@ -52,26 +61,104 @@ const AdminUserManagement: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    // Search filter
-    const matchesSearch = searchTerm === '' || 
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      setUpdating(userId);
+      await AdminService.deleteUser(userId);
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === userId ? { ...user, status: 'inactive' } : user
+      ));
+      
+      setShowDeleteModal(null);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      alert('Failed to delete user');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleUpdateStatus = async (userId: string, newStatus: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave') => {
+    try {
+      setUpdating(userId);
+      await AdminService.updateUserStatus(userId, newStatus);
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === userId ? { ...user, status: newStatus } : user
+      ));
+      
+      setShowStatusModal(null);
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      alert('Failed to update user status');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'inactive': return <XCircle className="h-4 w-4 text-gray-500" />;
+      case 'dropout': return <UserX className="h-4 w-4 text-red-500" />;
+      case 'placed': return <Award className="h-4 w-4 text-purple-500" />;
+      case 'on_leave': return <Clock className="h-4 w-4 text-orange-500" />;
+      default: return <CheckCircle className="h-4 w-4 text-green-500" />;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active': return 'Active';
+      case 'inactive': return 'Inactive';
+      case 'dropout': return 'Dropout';
+      case 'placed': return 'Placed';
+      case 'on_leave': return 'On Leave';
+      default: return 'Active';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'inactive': return 'bg-gray-100 text-gray-800';
+      case 'dropout': return 'bg-red-100 text-red-800';
+      case 'placed': return 'bg-purple-100 text-purple-800';
+      case 'on_leave': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-green-100 text-green-800';
+    }
+  };
+
+    const filteredUsers = users.filter(user => {
+    // Text search
+    const matchesSearch = !searchTerm || 
       user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Type filter
-    let matchesType = true;
-    if (filterType === 'admin') matchesType = user.isAdmin === true;
-    if (filterType === 'student') matchesType = !user.isAdmin;
-    if (filterType === 'no_mentor') matchesType = !user.isAdmin && !user.mentor_id;
+    const matchesFilter = filterType === 'all' ||
+      (filterType === 'admin' && user.isAdmin) ||
+      (filterType === 'student' && !user.isAdmin) ||
+      (filterType === 'no_mentor' && !user.isAdmin && !user.mentor_id) ||
+      (filterType === 'inactive' && user.status === 'inactive') ||
+      (filterType === 'dropout' && user.status === 'dropout') ||
+      (filterType === 'placed' && user.status === 'placed');
 
-    return matchesSearch && matchesType;
+    return matchesSearch && matchesFilter;
   });
 
   const stats = {
     total: users.length,
     admins: users.filter(u => u.isAdmin).length,
     students: users.filter(u => !u.isAdmin).length,
-    withoutMentor: users.filter(u => !u.isAdmin && !u.mentor_id).length
+    withoutMentor: users.filter(u => !u.isAdmin && !u.mentor_id).length,
+    active: users.filter(u => !u.status || u.status === 'active').length,
+    inactive: users.filter(u => u.status === 'inactive').length,
+    dropout: users.filter(u => u.status === 'dropout').length,
+    placed: users.filter(u => u.status === 'placed').length
   };
 
   if (loading) {
@@ -125,7 +212,40 @@ const AdminUserManagement: React.FC = () => {
             <AlertCircle className="h-8 w-8 text-orange-500" />
           </div>
         </div>
+
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Active</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
+            </div>
+            <CheckCircle className="h-8 w-8 text-green-500" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Placed</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.placed}</p>
+            </div>
+            <Award className="h-8 w-8 text-purple-500" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Dropout</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.dropout}</p>
+            </div>
+            <UserX className="h-8 w-8 text-red-500" />
+          </div>
+        </div>
       </div>
+
+      {/* Attendance Dashboard */}
+      <AttendanceDashboard />
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4">
@@ -145,12 +265,13 @@ const AdminUserManagement: React.FC = () => {
           </div>
 
           {/* Filter Buttons */}
-          <div className="flex gap-2">
+                    {/* Filter Buttons */}
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filterType === 'all'
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -158,9 +279,9 @@ const AdminUserManagement: React.FC = () => {
             </button>
             <button
               onClick={() => setFilterType('admin')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filterType === 'admin'
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -168,9 +289,9 @@ const AdminUserManagement: React.FC = () => {
             </button>
             <button
               onClick={() => setFilterType('student')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filterType === 'student'
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -178,13 +299,43 @@ const AdminUserManagement: React.FC = () => {
             </button>
             <button
               onClick={() => setFilterType('no_mentor')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filterType === 'no_mentor'
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               No Mentor
+            </button>
+            <button
+              onClick={() => setFilterType('inactive')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filterType === 'inactive'
+                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Inactive
+            </button>
+            <button
+              onClick={() => setFilterType('dropout')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filterType === 'dropout'
+                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Dropout
+            </button>
+            <button
+              onClick={() => setFilterType('placed')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filterType === 'placed'
+                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Placed
             </button>
           </div>
         </div>
@@ -206,6 +357,9 @@ const AdminUserManagement: React.FC = () => {
                   Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Mentor Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -219,7 +373,7 @@ const AdminUserManagement: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                     No users found
                   </td>
                 </tr>
@@ -259,6 +413,12 @@ const AdminUserManagement: React.FC = () => {
                         </span>
                       )}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(user.status || 'active')}`}>
+                        {getStatusIcon(user.status || 'active')}
+                        <span className="ml-1">{getStatusLabel(user.status || 'active')}</span>
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.mentor_id ? (
                         <span className="text-green-600">Has Mentor</span>
@@ -275,24 +435,44 @@ const AdminUserManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => handleToggleAdmin(user.id, user.isAdmin || false)}
-                        disabled={updating === user.id}
-                        className={`inline-flex items-center px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                          user.isAdmin
-                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                            : 'bg-green-100 text-green-700 hover:bg-green-200'
-                        } ${updating === user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        {updating === user.id ? (
-                          <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></span>
-                        ) : user.isAdmin ? (
-                          <ShieldOff className="h-4 w-4 mr-1" />
-                        ) : (
-                          <Shield className="h-4 w-4 mr-1" />
-                        )}
-                        {user.isAdmin ? 'Remove Admin' : 'Make Admin'}
-                      </button>
+                      <div className="flex space-x-2">
+                        {/* Admin Toggle Button */}
+                        <button
+                          onClick={() => handleToggleAdmin(user.id, user.isAdmin || false)}
+                          disabled={updating === user.id}
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium transition-colors ${
+                            user.isAdmin
+                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          } ${updating === user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {updating === user.id ? (
+                            <span className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-current"></span>
+                          ) : user.isAdmin ? (
+                            <ShieldOff className="h-3 w-3" />
+                          ) : (
+                            <Shield className="h-3 w-3" />
+                          )}
+                        </button>
+
+                        {/* Status Button */}
+                        <button
+                          onClick={() => setShowStatusModal(user.id)}
+                          disabled={updating === user.id}
+                          className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors disabled:opacity-50"
+                        >
+                          {getStatusIcon(user.status || 'active')}
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => setShowDeleteModal(user.id)}
+                          disabled={updating === user.id}
+                          className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -317,6 +497,89 @@ const AdminUserManagement: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete User Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Delete User</h3>
+              <button
+                onClick={() => setShowDeleteModal(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete this user? This will set their status to inactive.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteModal(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => showDeleteModal && handleDeleteUser(showDeleteModal)}
+                disabled={updating !== null}
+                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {updating ? 'Deleting...' : 'Delete User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Status Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Update User Status</h3>
+              <button
+                onClick={() => setShowStatusModal(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Status
+              </label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="dropout">Dropout</option>
+                <option value="placed">Placed</option>
+                <option value="on_leave">On Leave</option>
+              </select>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowStatusModal(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => showStatusModal && handleUpdateStatus(showStatusModal, selectedStatus)}
+                disabled={updating !== null}
+                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {updating ? 'Updating...' : 'Update Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

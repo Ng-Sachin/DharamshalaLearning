@@ -469,7 +469,32 @@ export class AdminService extends FirestoreService {
 
   // Update user admin status
   static async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
-    return this.update<any>(COLLECTIONS.USERS, userId, { isAdmin });
+    return this.update<any>(COLLECTIONS.USERS, userId, { 
+      isAdmin,
+      updated_at: new Date()
+    });
+  }
+
+  // Update user status
+  static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave'): Promise<void> {
+    return this.update<any>(COLLECTIONS.USERS, userId, { 
+      status,
+      updated_at: new Date()
+    });
+  }
+
+  // Delete user (soft delete by setting status to 'inactive')
+  static async deleteUser(userId: string): Promise<void> {
+    return this.update<any>(COLLECTIONS.USERS, userId, { 
+      status: 'inactive',
+      deleted_at: new Date(),
+      updated_at: new Date()
+    });
+  }
+
+  // Permanently delete user (use with caution)
+  static async permanentlyDeleteUser(userId: string): Promise<void> {
+    return this.delete(COLLECTIONS.USERS, userId);
   }
 
   // Assign mentor to student

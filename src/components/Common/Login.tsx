@@ -69,7 +69,10 @@ const Login: React.FC = () => {
       // Provide more specific error messages
       let errorMessage = 'Failed to sign in with Google. Please try again.';
       
-      if (error.code === 'auth/popup-blocked') {
+      if (error.message && error.message.includes('Access denied')) {
+        // Domain restriction error
+        errorMessage = error.message;
+      } else if (error.code === 'auth/popup-blocked') {
         errorMessage = 'Popup was blocked. Redirecting to Google sign-in...';
       } else if (error.code === 'auth/cancelled-popup-request') {
         errorMessage = 'Sign-in cancelled. Redirecting...';
@@ -113,6 +116,25 @@ const Login: React.FC = () => {
             <p className="mt-2 text-center text-sm text-gray-600">
               Sign in to access your learning journey
             </p>
+          </div>
+
+          {/* Domain Restriction Notice */}
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Navgurukul Access Only
+                </h3>
+                <div className="mt-1 text-sm text-blue-700">
+                  <p>Only users with <strong>@navgurukul.org</strong> email addresses can access this platform.</p>
+                </div>
+              </div>
+            </div>
           </div>
 
         <div className="mt-8">

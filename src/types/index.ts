@@ -14,8 +14,10 @@ export interface User {
   campus?: 'Dantewada' | 'Dharamshala' | 'Eternal' | 'Jashpur' | 'Kishanganj' | 'Pune' | 'Raigarh' | 'Sarjapura' | 'Bageshree' | 'Malhar' | 'Bhairav';  // User's campus or house
   current_phase_id?: string;  // Current phase the user is on
   current_phase_name?: string;  // Denormalized phase name for display
+  status?: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave';  // User's current status
   leave_from?: Date;  // Start date of leave period
   leave_to?: Date;    // End date of leave period
+  deleted_at?: Date;  // Soft delete timestamp
   created_at: Date;
   updated_at: Date;
 }

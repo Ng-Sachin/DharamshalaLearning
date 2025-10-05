@@ -120,10 +120,26 @@ export default function Navigation() {
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
+  // House-based navigation colors
+  const getNavBackgroundColor = () => {
+    if (!userData?.house) return 'bg-white';
+    
+    switch (userData.house) {
+      case 'Bageshree':
+        return 'bg-blue-50 border-blue-200';
+      case 'Bhairav':
+        return 'bg-orange-50 border-orange-200';
+      case 'Malhar':
+        return 'bg-green-50 border-green-200';
+      default:
+        return 'bg-white border-gray-200';
+    }
+  };
+
   return (
     <>
       {/* Top Navigation Bar - Desktop & Mobile */}
-      <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+      <nav className={`${getNavBackgroundColor()} shadow-sm border-b sticky top-0 z-30`}>
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo and Brand */}
@@ -333,7 +349,7 @@ export default function Navigation() {
 
         {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white shadow-lg">
+          <div className={`md:hidden border-t ${getNavBackgroundColor()} shadow-lg`}>
             <div className="px-2 pt-2 pb-3 space-y-1">
               {filteredNavItems.map((item) => {
                 const Icon = item.icon;
@@ -425,7 +441,7 @@ export default function Navigation() {
       </nav>
 
       {/* Mobile Bottom Navigation (Instagram/YouTube style) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 ${getNavBackgroundColor()} border-t shadow-lg z-30`}>
         <div className="flex justify-around items-center h-16">
           {filteredNavItems.slice(0, 5).map((item) => {
             const Icon = item.icon;

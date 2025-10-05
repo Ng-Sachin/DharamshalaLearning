@@ -5,8 +5,7 @@ import {
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
-  User as FirebaseUser,
-  updateProfile
+  User as FirebaseUser
 } from 'firebase/auth';
 import { auth } from './firebase';
 import { UserService } from './firestore';
@@ -76,6 +75,22 @@ export class AuthService {
 
   // Common handler for both popup and redirect results
   private static async handleGoogleSignInResult(firebaseUser: FirebaseUser): Promise<FirebaseUser> {
+    // Check if user's email domain is allowed (Navgurukul domain only)
+    const userEmail = firebaseUser.email;
+    if (!userEmail) {
+      await signOut(auth);
+      throw new Error('No email address found in Google account');
+    }
+
+    const allowedDomains = ['navgurukul.org'];
+    const emailDomain = userEmail.split('@')[1]?.toLowerCase();
+    
+    if (!allowedDomains.includes(emailDomain)) {
+      // Sign out the user immediately if domain is not allowed
+      await signOut(auth);
+      throw new Error(`Access denied. Only Navgurukul domain emails (@navgurukul.org) are allowed to sign in.`);
+    }
+
     // Check if user exists in Firestore, create if not
     let existingUser = await UserService.getUserById(firebaseUser.uid);
     
