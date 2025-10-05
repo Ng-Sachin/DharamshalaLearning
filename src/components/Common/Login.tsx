@@ -97,16 +97,23 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Welcome to Campus Learning Dashboard
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in with your Google account to continue
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <div className="mx-auto h-24 w-24 flex items-center justify-center">
+              <img 
+                src="/logo192.png" 
+                alt="Campus Learning" 
+                className="h-24 w-24 object-contain"
+              />
+            </div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Campus Learning Dashboard
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Sign in to access your learning journey
+            </p>
+          </div>
 
         <div className="mt-8">
           {error && (

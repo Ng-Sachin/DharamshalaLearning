@@ -300,21 +300,3 @@ export interface MentorWithCapacity {
   available_slots: number;
   mentee_names: string[];
 }
-
-// Bug/Feature Report interface
-export interface BugReport {
-  id: string;
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  type: 'bug' | 'feature';
-  title: string;
-  description: string;
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
-  priority?: 'low' | 'medium' | 'high';
-  admin_notes?: string;
-  created_at: Date;
-  updated_at: Date;
-  resolved_at?: Date;
-  resolved_by?: string; // Admin user ID who resolved
-}
