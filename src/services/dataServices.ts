@@ -937,9 +937,7 @@ export class MentorshipService extends FirestoreService {
       const mentorsWithCapacity: MentorWithCapacity[] = [];
       
       for (const user of allUsers) {
-        // Skip if user is marked as admin only (optional - you can remove this filter)
-        // For now, we'll include everyone
-        
+        // All users are considered as mentors
         // Get all students assigned to this user as mentor
         const mentees = await UserService.getStudentsByMentor(user.id);
         
@@ -947,10 +945,9 @@ export class MentorshipService extends FirestoreService {
         const maxMentees = user.isSuperMentor 
           ? 999 
           : (user.max_mentees || 2);
-        
         const currentMentees = mentees.length;
         const availableSlots = user.isSuperMentor ? 999 : Math.max(0, maxMentees - currentMentees);
-
+        
         mentorsWithCapacity.push({
           mentor: user,
           current_mentees: currentMentees,
@@ -962,7 +959,7 @@ export class MentorshipService extends FirestoreService {
 
       return mentorsWithCapacity;
     } catch (error) {
-      console.error('Error getting mentors with capacity:', error);
+      console.error('❌ MentorshipService: Error getting mentors with capacity:', error);
       return [];
     }
   }
@@ -990,43 +987,71 @@ export class MentorshipService extends FirestoreService {
     reason?: string
   ): Promise<string> {
     try {
+      console.log('🔧 MentorshipService.requestMentorChange called with:', {
+        studentId,
+        requestedMentorId,
+        currentMentorId,
+        reason: reason?.substring(0, 50) + '...'
+      });
+      
       const { UserService } = await import('./firestore');
       
       // Get student and mentor info for denormalization
+      console.log('📥 Fetching student info...');
       const student = await UserService.getUserById(studentId);
+      console.log('📥 Fetching requested mentor info...');
       const requestedMentor = await UserService.getUserById(requestedMentorId);
+      console.log('📥 Fetching current mentor info...');
       const currentMentor = currentMentorId ? await UserService.getUserById(currentMentorId) : null;
 
       if (!student || !requestedMentor) {
-        throw new Error('Student or requested mentor not found');
+        const error = `Student or requested mentor not found - student: ${!!student}, requestedMentor: ${!!requestedMentor}`;
+        console.error('❌', error);
+        throw new Error(error);
       }
 
-      const requestData: Omit<MentorChangeRequest, 'id'> = {
+      console.log('✅ All user data fetched successfully');
+
+      // Build request data, excluding undefined values (Firebase doesn't allow undefined)
+      const requestData: any = {
         student_id: studentId,
         student_name: student.name,
         student_email: student.email,
         requested_mentor_id: requestedMentorId,
         requested_mentor_name: requestedMentor.name,
-        current_mentor_id: currentMentorId,
-        current_mentor_name: currentMentor?.name,
         status: 'pending',
-        reason: reason,
         created_at: new Date()
       };
 
+      // Only add optional fields if they have values
+      if (currentMentorId) {
+        requestData.current_mentor_id = currentMentorId;
+      }
+      if (currentMentor?.name) {
+        requestData.current_mentor_name = currentMentor.name;
+      }
+      if (reason) {
+        requestData.reason = reason;
+      }
+
+      console.log('💾 Creating mentor request document...', requestData);
       const requestId = await this.create<MentorChangeRequest>(
         this.MENTOR_REQUESTS_COLLECTION,
         requestData
       );
+      console.log('✅ Request document created with ID:', requestId);
 
       // Update student's pending_mentor_id
+      console.log('🔄 Updating student pending_mentor_id...');
       await UserService.updateUser(studentId, {
         pending_mentor_id: requestedMentorId
       });
+      console.log('✅ Student updated successfully');
 
+      console.log('🎉 Mentor change request completed successfully');
       return requestId;
     } catch (error) {
-      console.error('Error requesting mentor change:', error);
+      console.error('❌ MentorshipService.requestMentorChange error:', error);
       throw error;
     }
   }
@@ -1096,22 +1121,26 @@ export class MentorshipService extends FirestoreService {
         throw new Error('Mentor has no available slots');
       }
 
-      // Update the request
+      // Update the request (conditionally include admin_notes to avoid undefined)
+      const updateData: any = {
+        status: 'approved',
+        reviewed_at: new Date(),
+        reviewed_by: adminId
+      };
+      if (adminNotes) {
+        updateData.admin_notes = adminNotes;
+      }
+
       await this.update<MentorChangeRequest>(
         this.MENTOR_REQUESTS_COLLECTION,
         requestId,
-        {
-          status: 'approved',
-          reviewed_at: new Date(),
-          reviewed_by: adminId,
-          admin_notes: adminNotes
-        }
+        updateData
       );
 
       // Update student's mentor assignment
       await UserService.updateUser(request.student_id, {
         mentor_id: request.requested_mentor_id,
-        pending_mentor_id: undefined
+        pending_mentor_id: ''  // Clear with empty string (Firebase accepts this)
       });
 
     } catch (error) {
@@ -1145,21 +1174,25 @@ export class MentorshipService extends FirestoreService {
         throw new Error('Request is not pending');
       }
 
-      // Update the request
+      // Update the request (conditionally include admin_notes to avoid undefined)
+      const updateData: any = {
+        status: 'rejected',
+        reviewed_at: new Date(),
+        reviewed_by: adminId
+      };
+      if (adminNotes) {
+        updateData.admin_notes = adminNotes;
+      }
+
       await this.update<MentorChangeRequest>(
         this.MENTOR_REQUESTS_COLLECTION,
         requestId,
-        {
-          status: 'rejected',
-          reviewed_at: new Date(),
-          reviewed_by: adminId,
-          admin_notes: adminNotes
-        }
+        updateData
       );
 
       // Clear student's pending_mentor_id
       await UserService.updateUser(request.student_id, {
-        pending_mentor_id: undefined
+        pending_mentor_id: ''  // Clear with empty string (Firebase accepts this)
       });
 
     } catch (error) {

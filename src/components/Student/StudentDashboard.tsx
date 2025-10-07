@@ -348,6 +348,7 @@ const StudentDashboard: React.FC = () => {
       {/* Mentor Browser Modal */}
       {showMentorBrowser && userData && (
         <MentorBrowser
+          key={Date.now()} // Force remount to reload fresh data every time
           currentStudentId={userData.id}
           currentMentorId={userData.mentor_id}
           onClose={() => setShowMentorBrowser(false)}

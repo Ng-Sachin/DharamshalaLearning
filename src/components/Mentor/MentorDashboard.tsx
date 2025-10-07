@@ -518,7 +518,7 @@ const MentorDashboard: React.FC = () => {
                   </div>
 
                   <button
-                    onClick={() => navigate(`/mentor/student/${overview.student.id}`)}
+                    onClick={() => navigate(`/mentor/mentee/${overview.student.id}`)}
                     className="mt-3 w-full flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
                   >
                     View Details
@@ -555,7 +555,7 @@ const MentorDashboard: React.FC = () => {
               </div>
               <div className="flex items-center justify-center">
                 <button
-                  onClick={() => navigate(`/mentor/student/${mentorData.id}`)}
+                  onClick={() => navigate(`/mentor/mentee/${mentorData.id}`)}
                   className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                 >
                   View Mentor Details

@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { bugReportService } from '../../services/bugReportService';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface BugFeatureModalProps {
   onClose: () => void;
 }
 
 const BugFeatureModal: React.FC<BugFeatureModalProps> = ({ onClose }) => {
+  const { userData } = useAuth();
   const [description, setDescription] = useState('');
   const [includeConsole, setIncludeConsole] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   // Handle ESC key
   useEffect(() => {
@@ -22,16 +27,32 @@ const BugFeatureModal: React.FC<BugFeatureModalProps> = ({ onClose }) => {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Optionally collect console logs
-    let logs = '';
-    if (includeConsole) {
-      logs = consoleLogs || 'No logs provided.';
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const logs = includeConsole ? consoleLogs : '';
+      await bugReportService.submitReport(
+        description,
+        logs,
+        userData?.id,
+        userData?.name,
+        userData?.email
+      );
+      setSubmitted(true);
+      
+      // Auto-close after 2 seconds
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    } catch (err) {
+      console.error('Error submitting report:', err);
+      setError('Failed to submit report. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-    // Here you would send the report to backend/email
-    // For now, just mark as submitted
-    setSubmitted(true);
   };
 
   return (
@@ -58,6 +79,11 @@ const BugFeatureModal: React.FC<BugFeatureModalProps> = ({ onClose }) => {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {error}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
               <textarea
@@ -104,9 +130,10 @@ const BugFeatureModal: React.FC<BugFeatureModalProps> = ({ onClose }) => {
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+                disabled={submitting}
+                className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
               >
-                Submit Report
+                {submitting ? 'Submitting...' : 'Submit Report'}
               </button>
             </div>
           </form>
