@@ -95,6 +95,9 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
   };
 
   const applyFilters = () => {
+    // Don't apply filters if mentors data hasn't loaded yet
+    if (mentors.length === 0) return;
+
     let filtered = [...mentors];
 
     // Search filter
