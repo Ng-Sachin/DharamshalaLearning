@@ -2,16 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserService } from '../../services/firestore';
-import { GoalService, ReflectionService, PairProgrammingService, AdminService } from '../../services/dataServices';
+import { GoalService, ReflectionService, AdminService } from '../../services/dataServices';
 import { User, MenteeOverview, DailyGoal, DailyReflection } from '../../types';
 import {
   Users,
   Target,
   MessageSquare,
-  Code,
   Bell,
-  AlertCircle,
-  CheckCircle,
   ArrowRight,
   UserCheck,
   GraduationCap
@@ -48,7 +45,6 @@ const MentorDashboard: React.FC = () => {
     totalMentees: 0,
     totalStudents: 0
   });
-  const [totalPendingPairRequests, setTotalPendingPairRequests] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const loadDashboardData = useCallback(async () => {
@@ -65,13 +61,11 @@ const MentorDashboard: React.FC = () => {
         myGoals,
         myReflections,
         mentees,
-        pairRequests,
         allUsers
       ] = await Promise.all([
         GoalService.getGoalsByStudent(userData.id),
         ReflectionService.getReflectionsByStudent(userData.id),
         UserService.getStudentsByMentor(userData.id),
-        PairProgrammingService.getRequestsByMentor(userData.id),
         AdminService.getAllUsers()
       ]);
 
@@ -156,7 +150,6 @@ const MentorDashboard: React.FC = () => {
       };
 
       setStats(newStats);
-      setTotalPendingPairRequests(pairRequests.filter(r => r.status === 'pending').length);
 
       // Build mentee overviews for detailed view
       const overviews = await Promise.all(
@@ -218,11 +211,6 @@ const MentorDashboard: React.FC = () => {
     if (score >= 70) return 'text-blue-600 bg-blue-50';
     if (score >= 50) return 'text-yellow-600 bg-yellow-50';
     return 'text-red-600 bg-red-50';
-  };
-
-  const canApprove = (studentId: string) => {
-    if (userData?.isAdmin) return true;
-    return menteeOverviews.some(mentee => mentee.student.id === studentId);
   };
 
   if (loading) {

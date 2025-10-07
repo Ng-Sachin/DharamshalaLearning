@@ -319,4 +319,15 @@ export class UserService extends FirestoreService {
   static async assignMentorToStudent(studentId: string, mentorId: string): Promise<void> {
     return this.updateUser(studentId, { mentor_id: mentorId });
   }
+
+  // Fetch mentees assigned to a specific mentor
+  static async getAssignedMentees(mentorId: string): Promise<string[]> {
+    try {
+      const mentees = await this.getWhere<User>(COLLECTIONS.USERS, 'mentor_id', '==', mentorId);
+      return mentees.map(mentee => mentee.id);
+    } catch (error) {
+      console.error('Error fetching assigned mentees:', error);
+      throw error;
+    }
+  }
 }

@@ -43,6 +43,8 @@ const StudentCardSkeleton: React.FC = () => (
 
 const MentorCampusTab: React.FC<{ campusId: string }> = ({ campusId }) => {
   const { userData } = useAuth();
+
+  // Ensure hooks are always called
   const [campusData, setCampusData] = useState<CampusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -101,10 +103,10 @@ const MentorCampusTab: React.FC<{ campusId: string }> = ({ campusId }) => {
     if (!userData) return false;
 
     // Admin can approve everyone
-    if (userData.isAdmin) return true;
+    if (userData.isAdmin || userData.role === 'admin') return true;
 
     // Assigned mentor can approve their mentees
-    if (userData.isMentor && userData.id) {
+    if (userData.isMentor || userData.role === 'mentor' || userData.role === 'super_mentor') {
       // For now, allow mentors to approve (we can refine this later with proper mentor-student assignment)
       return true;
     }
@@ -190,26 +192,29 @@ const MentorCampusTab: React.FC<{ campusId: string }> = ({ campusId }) => {
   const reflectionsToReview = campusData?.reflections.filter(r => r.status === 'pending').length || 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
       {selectedUser ? (
         // Detailed User View
         <div>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
             <div className="flex items-center space-x-4">
               <button
                 onClick={goBackToList}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
               >
                 <ArrowLeft className="h-5 w-5" />
-                <span>Back to Students</span>
+                <span className="hidden sm:inline">Back to Students</span>
+                <span className="sm:hidden">Back</span>
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{selectedUser.name}</h1>
-                <p className="text-gray-600">{selectedUser.email}</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{selectedUser.name}</h1>
+                <p className="text-sm sm:text-base text-gray-600">{selectedUser.email}</p>
               </div>
             </div>
-            <button onClick={() => selectedUser && selectUser(selectedUser)} className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg shadow hover:bg-primary-700">
-              <RefreshCw className="h-5 w-5 mr-2" /> Refresh
+            <button onClick={() => selectedUser && selectUser(selectedUser)} className="inline-flex items-center px-3 sm:px-4 py-2 bg-primary-600 text-white rounded-lg shadow hover:bg-primary-700 text-sm sm:text-base">
+              <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> 
+              <span className="hidden sm:inline">Refresh</span>
+              <span className="sm:hidden">Refresh</span>
             </button>
           </div>
 
@@ -285,17 +290,17 @@ const MentorCampusTab: React.FC<{ campusId: string }> = ({ campusId }) => {
                                 </span>
                               </div>
                               {canApprove(selectedUser.id) && goal.status === 'pending' && (
-                                <div className="flex space-x-2">
+                                <div className="flex flex-col sm:flex-row gap-2">
                                   <button
                                     onClick={() => handleGoalApproval(goal.id, 'approved')}
-                                    className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                                    className="flex items-center justify-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
                                   >
                                     <CheckCircle className="h-4 w-4" />
                                     <span>Approve</span>
                                   </button>
                                   <button
                                     onClick={() => handleGoalApproval(goal.id, 'reviewed')}
-                                    className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                    className="flex items-center justify-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
                                   >
                                     <Eye className="h-4 w-4" />
                                     <span>Review</span>
@@ -343,17 +348,17 @@ const MentorCampusTab: React.FC<{ campusId: string }> = ({ campusId }) => {
                                 </span>
                               </div>
                               {canApprove(selectedUser.id) && reflection.status === 'pending' && (
-                                <div className="flex space-x-2">
+                                <div className="flex flex-col sm:flex-row gap-2">
                                   <button
                                     onClick={() => handleReflectionApproval(reflection.id, 'approved')}
-                                    className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                                    className="flex items-center justify-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
                                   >
                                     <CheckCircle className="h-4 w-4" />
                                     <span>Approve</span>
                                   </button>
                                   <button
                                     onClick={() => handleReflectionApproval(reflection.id, 'reviewed')}
-                                    className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                    className="flex items-center justify-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
                                   >
                                     <Eye className="h-4 w-4" />
                                     <span>Review</span>
@@ -408,45 +413,47 @@ const MentorCampusTab: React.FC<{ campusId: string }> = ({ campusId }) => {
       ) : (
         // Student List View
         <div>
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex space-x-4">
-              <div className="bg-white rounded-lg shadow p-4 flex items-center space-x-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setFilter('all')}>
-                <Users className="h-6 w-6 text-blue-600" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 flex-1">
+              <div className="bg-white rounded-lg shadow p-3 sm:p-4 flex items-center space-x-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setFilter('all')}>
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Total Students</p>
-                  <p className="text-xl font-bold text-gray-900">{totalStudents}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Total Students</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">{totalStudents}</p>
                 </div>
               </div>
-              <div className="bg-white rounded-lg shadow p-4 flex items-center space-x-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setFilter('goals')}>
-                <Target className="h-6 w-6 text-green-600" />
+              <div className="bg-white rounded-lg shadow p-3 sm:p-4 flex items-center space-x-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setFilter('goals')}>
+                <Target className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Goals to Review</p>
-                  <p className="text-xl font-bold text-gray-900">{goalsToReview}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Goals to Review</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">{goalsToReview}</p>
                 </div>
               </div>
-              <div className="bg-white rounded-lg shadow p-4 flex items-center space-x-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setFilter('reflections')}>
-                <MessageSquare className="h-6 w-6 text-purple-600" />
+              <div className="bg-white rounded-lg shadow p-3 sm:p-4 flex items-center space-x-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setFilter('reflections')}>
+                <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Reflections to Review</p>
-                  <p className="text-xl font-bold text-gray-900">{reflectionsToReview}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Reflections to Review</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">{reflectionsToReview}</p>
                 </div>
               </div>
             </div>
-            <button onClick={handleRefresh} className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg shadow hover:bg-primary-700">
-              <RefreshCw className="h-5 w-5 mr-2" /> Refresh
+            <button onClick={handleRefresh} className="inline-flex items-center px-3 sm:px-4 py-2 bg-primary-600 text-white rounded-lg shadow hover:bg-primary-700 text-sm sm:text-base self-start sm:self-auto">
+              <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> 
+              <span className="hidden sm:inline">Refresh</span>
+              <span className="sm:hidden">Refresh</span>
             </button>
           </div>
 
           <div className="mb-4 flex items-center">
-            <div className="relative w-full max-w-md">
+            <div className="relative w-full sm:max-w-md">
               <input
                 type="text"
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Search students by name or email..."
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm sm:text-base"
+                placeholder="Search students..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
-              <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </div>
           </div>
 
@@ -502,13 +509,13 @@ const MentorCampusTab: React.FC<{ campusId: string }> = ({ campusId }) => {
                 <button
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
-                  className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+                  className="px-2 sm:px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50 text-sm sm:text-base"
                 >Prev</button>
-                <span>Page {page} of {Math.ceil(filteredStudents.length / PAGE_SIZE) || 1}</span>
+                <span className="text-sm sm:text-base">Page {page} of {Math.ceil(filteredStudents.length / PAGE_SIZE) || 1}</span>
                 <button
                   disabled={page * PAGE_SIZE >= filteredStudents.length}
                   onClick={() => setPage(page + 1)}
-                  className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+                  className="px-2 sm:px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50 text-sm sm:text-base"
                 >Next</button>
               </div>
             </div>

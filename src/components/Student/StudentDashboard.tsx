@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
@@ -14,9 +14,6 @@ import MentorBrowser from './MentorBrowser';
 import { 
   DailyGoal, 
   DailyReflection, 
-  Attendance, 
-  PairProgrammingRequest,
-  LeaveRequest,
   User
 } from '../../types';
 import { 
@@ -31,7 +28,6 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
-  Award,
   Star,
   UserCircle
 } from 'lucide-react';
@@ -67,49 +63,7 @@ const StudentDashboard: React.FC = () => {
   const [showMentorBrowser, setShowMentorBrowser] = useState(false);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
 
-  useEffect(() => {
-    if (userData) {
-      loadDashboardData();
-    }
-  }, [userData]);
-
-  useEffect(() => {
-    const loadMentor = async () => {
-      if (!userData?.mentor_id) {
-        setLoadingMentor(false);
-        return;
-      }
-
-      try {
-        const mentor = await UserService.getUserById(userData.mentor_id);
-        setMentorData(mentor);
-      } catch (error) {
-        console.error('Error loading mentor data:', error);
-      } finally {
-        setLoadingMentor(false);
-      }
-    };
-
-    loadMentor();
-  }, [userData?.mentor_id]);
-
-  useEffect(() => {
-    const checkPendingRequest = async () => {
-      if (!userData?.id) return;
-
-      try {
-        const requests = await MentorshipService.getStudentMentorRequests(userData.id);
-        const pending = requests.some(r => r.status === 'pending');
-        setHasPendingRequest(pending);
-      } catch (error) {
-        console.error('Error checking pending requests:', error);
-      }
-    };
-
-    checkPendingRequest();
-  }, [userData?.id]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     if (!userData) return;
 
     try {
@@ -164,10 +118,10 @@ const StudentDashboard: React.FC = () => {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const attendanceRecords = await AttendanceService.getStudentAttendance(userData.id);
       
-      const recentAttendance = attendanceRecords.filter(record => {
-        const recordDate = new Date(record.date);
-        return recordDate >= thirtyDaysAgo;
-      });
+        const recentAttendance = attendanceRecords.filter(record => {
+          const recordDate = new Date(record.date);
+          return recordDate >= thirtyDaysAgo;
+        });
 
         const presentDays = recentAttendance.filter(record => record.present_status === 'present').length;
         monthlyAttendance = recentAttendance.length > 0 ? (presentDays / recentAttendance.length) * 100 : 0;
@@ -187,9 +141,9 @@ const StudentDashboard: React.FC = () => {
         );
         
         leaveDaysTaken = currentYearLeaves.reduce((total, leave) => {
-        const start = new Date(leave.start_date);
-        const end = new Date(leave.end_date);
-        const diffTime = Math.abs(end.getTime() - start.getTime());
+          const start = new Date(leave.start_date);
+          const end = new Date(leave.end_date);
+          const diffTime = Math.abs(end.getTime() - start.getTime());
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
           return total + diffDays;
         }, 0);
@@ -216,7 +170,49 @@ const StudentDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userData]);
+
+  useEffect(() => {
+    if (userData) {
+      loadDashboardData();
+    }
+  }, [userData, loadDashboardData]);
+
+  useEffect(() => {
+    const loadMentor = async () => {
+      if (!userData?.mentor_id) {
+        setLoadingMentor(false);
+        return;
+      }
+
+      try {
+        const mentor = await UserService.getUserById(userData.mentor_id);
+        setMentorData(mentor);
+      } catch (error) {
+        console.error('Error loading mentor data:', error);
+      } finally {
+        setLoadingMentor(false);
+      }
+    };
+
+    loadMentor();
+  }, [userData?.mentor_id]);
+
+  useEffect(() => {
+    const checkPendingRequest = async () => {
+      if (!userData?.id) return;
+
+      try {
+        const requests = await MentorshipService.getStudentMentorRequests(userData.id);
+        const pending = requests.some(r => r.status === 'pending');
+        setHasPendingRequest(pending);
+      } catch (error) {
+        console.error('Error checking pending requests:', error);
+      }
+    };
+
+    checkPendingRequest();
+  }, [userData?.id]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -225,13 +221,6 @@ const StudentDashboard: React.FC = () => {
       case 'pending': return 'text-yellow-600 bg-yellow-100';
       default: return 'text-gray-600 bg-gray-100';
     }
-  };
-
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-green-500';
-    if (percentage >= 70) return 'bg-blue-500';
-    if (percentage >= 50) return 'bg-yellow-500';
-    return 'bg-red-500';
   };
 
   if (loading) {

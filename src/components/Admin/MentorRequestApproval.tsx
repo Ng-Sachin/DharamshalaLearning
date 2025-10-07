@@ -54,6 +54,7 @@ const MentorRequestApproval: React.FC = () => {
       await MentorshipService.approveMentorRequest(
         requestId,
         userData.id,
+        (userData.role === 'admin' || userData.role === 'super_mentor') ? userData.role : 'admin',
         adminNotes[requestId]
       );
 

@@ -20,6 +20,7 @@ export interface User {
   deleted_at?: Date;  // Soft delete timestamp
   created_at: Date;
   updated_at: Date;
+  role?: 'admin' | 'super_mentor' | 'mentor';  // Role of the user
 }
 
 // Phase interface

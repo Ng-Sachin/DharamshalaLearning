@@ -1096,11 +1096,12 @@ export class MentorshipService extends FirestoreService {
   static async approveMentorRequest(
     requestId: string,
     adminId: string,
+    adminRole: 'admin' | 'super_mentor',
     adminNotes?: string
   ): Promise<void> {
     try {
       const { UserService } = await import('./firestore');
-      
+
       // Get the request
       const request = await this.getById<MentorChangeRequest>(
         this.MENTOR_REQUESTS_COLLECTION,
@@ -1119,6 +1120,14 @@ export class MentorshipService extends FirestoreService {
       const mentorCapacity = await this.getMentorCapacity(request.requested_mentor_id);
       if (!mentorCapacity || mentorCapacity.available_slots <= 0) {
         throw new Error('Mentor has no available slots');
+      }
+
+      // Enforce role-based approval rules
+      if (adminRole === 'super_mentor') {
+        const assignedMentees = await UserService.getAssignedMentees(adminId);
+        if (!assignedMentees.includes(request.student_id)) {
+          throw new Error('Super mentor can only approve requests for their assigned mentees');
+        }
       }
 
       // Update the request (conditionally include admin_notes to avoid undefined)
