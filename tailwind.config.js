@@ -35,6 +35,10 @@ module.exports = {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
       },
+      animationDelay: {
+        '300': '300ms',
+        '700': '700ms',
+      },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },

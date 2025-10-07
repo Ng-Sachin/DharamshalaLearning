@@ -6,10 +6,10 @@ import MentorAssignment from './MentorAssignment';
 import CurriculumAdminPanel from './CurriculumAdminPanel';
 import SuperMentorManagement from './SuperMentorManagement';
 import MentorRequestApproval from './MentorRequestApproval';
-import { 
-  Database, 
-  RefreshCw, 
-  CheckCircle, 
+import {
+  Database,
+  RefreshCw,
+  CheckCircle,
   AlertCircle,
   Users,
   UserCheck,

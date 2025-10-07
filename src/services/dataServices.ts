@@ -8,165 +8,212 @@ import {
   Attendance,
   MentorNote,
   LeaveRequest,
-  StudentProgress,
   MentorChangeRequest,
   MentorWithCapacity,
   User
 } from '../types';
-import { Timestamp } from 'firebase/firestore';
 
 // Phase Service
 export class PhaseService extends FirestoreService {
   static async createPhase(phaseData: Omit<Phase, 'id'>): Promise<string> {
-    return this.create<Phase>(COLLECTIONS.PHASES, phaseData);
+    try {
+      return await this.create<Phase>(COLLECTIONS.PHASES, phaseData);
+    } catch (error) {
+      console.error('Error creating phase:', error);
+      throw error;
+    }
   }
 
   static async getAllPhases(): Promise<Phase[]> {
-    // Get all phases without ordering (since data is small)
-    const phases = await this.getAll<Phase>(COLLECTIONS.PHASES);
+    try {
+      // Get all phases without ordering (since data is small)
+      const phases = await this.getAll<Phase>(COLLECTIONS.PHASES);
 
-    // Sort by order client-side
-    return phases.sort((a, b) => a.order - b.order);
+      // Sort by order client-side
+      return phases.sort((a, b) => a.order - b.order);
+    } catch (error) {
+      console.error('Error fetching all phases:', error);
+      throw error;
+    }
   }
 
   static async getPhaseById(id: string): Promise<Phase | null> {
-    return this.getById<Phase>(COLLECTIONS.PHASES, id);
+    try {
+      return await this.getById<Phase>(COLLECTIONS.PHASES, id);
+    } catch (error) {
+      console.error('Error fetching phase by ID:', error);
+      throw error;
+    }
   }
 
   static async updatePhase(id: string, phaseData: Partial<Phase>): Promise<void> {
-    return this.update<Phase>(COLLECTIONS.PHASES, id, phaseData);
+    try {
+      return await this.update<Phase>(COLLECTIONS.PHASES, id, phaseData);
+    } catch (error) {
+      console.error('Error updating phase:', error);
+      throw error;
+    }
   }
 
   static async deletePhase(id: string): Promise<void> {
-    return this.delete(COLLECTIONS.PHASES, id);
+    try {
+      return await this.delete(COLLECTIONS.PHASES, id);
+    } catch (error) {
+      console.error('Error deleting phase:', error);
+      throw error;
+    }
   }
 }
 
 // Topic Service
 export class TopicService extends FirestoreService {
   static async createTopic(topicData: Omit<Topic, 'id'>): Promise<string> {
-    return this.create<Topic>(COLLECTIONS.TOPICS, topicData);
+    try {
+      return await this.create<Topic>(COLLECTIONS.TOPICS, topicData);
+    } catch (error) {
+      console.error('Error creating topic:', error);
+      throw error;
+    }
   }
 
   static async getTopicsByPhase(phaseId: string): Promise<Topic[]> {
-    // Get all topics for the phase (uses single-field index on phase_id)
-    const topics = await this.getWhere<Topic>(COLLECTIONS.TOPICS, 'phase_id', '==', phaseId);
+    try {
+      // Get all topics for the phase (uses single-field index on phase_id)
+      const topics = await this.getWhere<Topic>(COLLECTIONS.TOPICS, 'phase_id', '==', phaseId);
 
-    // Sort by order client-side
-    return topics.sort((a, b) => a.order - b.order);
+      // Sort by order client-side
+      return topics.sort((a, b) => a.order - b.order);
+    } catch (error) {
+      console.error('Error fetching topics by phase:', error);
+      throw error;
+    }
   }
 
   static async getTopicById(id: string): Promise<Topic | null> {
-    return this.getById<Topic>(COLLECTIONS.TOPICS, id);
+    try {
+      return await this.getById<Topic>(COLLECTIONS.TOPICS, id);
+    } catch (error) {
+      console.error('Error fetching topic by ID:', error);
+      throw error;
+    }
   }
 
   static async updateTopic(id: string, topicData: Partial<Topic>): Promise<void> {
-    return this.update<Topic>(COLLECTIONS.TOPICS, id, topicData);
+    try {
+      return await this.update<Topic>(COLLECTIONS.TOPICS, id, topicData);
+    } catch (error) {
+      console.error('Error updating topic:', error);
+      throw error;
+    }
   }
 
   static async deleteTopic(id: string): Promise<void> {
-    return this.delete(COLLECTIONS.TOPICS, id);
+    try {
+      return await this.delete(COLLECTIONS.TOPICS, id);
+    } catch (error) {
+      console.error('Error deleting topic:', error);
+      throw error;
+    }
   }
 }
 
 // Daily Goal Service
 export class GoalService extends FirestoreService {
+  static async getAllGoals(limit = 50, startAfter?: any): Promise<DailyGoal[]> {
+    try {
+      return await this.getAll<DailyGoal>(COLLECTIONS.DAILY_GOALS, 'created_at', 'desc', limit);
+    } catch (error) {
+      console.error('Error fetching all goals:', error);
+      throw error;
+    }
+  }
+
   static async createGoal(goalData: Omit<DailyGoal, 'id'>): Promise<string> {
-    return this.create<DailyGoal>(COLLECTIONS.DAILY_GOALS, goalData);
+    try {
+      return await this.create<DailyGoal>(COLLECTIONS.DAILY_GOALS, goalData);
+    } catch (error) {
+      console.error('Error creating goal:', error);
+      throw error;
+    }
   }
 
   static async getGoalsByStudent(studentId: string, limit?: number): Promise<DailyGoal[]> {
-    console.log('🔍 [GoalService] getGoalsByStudent - studentId:', studentId);
-    // Get goals without ordering to avoid composite index requirement
-    const goals = await this.getWhere<DailyGoal>(
-      COLLECTIONS.DAILY_GOALS,
-      'student_id',
-      '==',
-      studentId
-    );
-    console.log('🔍 [GoalService] Raw goals from Firestore:', goals.length, 'goals');
-    goals.forEach((goal, index) => {
-      console.log(`  Goal ${index + 1}:`, {
-        id: goal.id,
-        created_at: goal.created_at,
-        created_at_type: typeof goal.created_at,
-        goal_text: goal.goal_text?.substring(0, 50) + '...'
-      });
-    });
+    try {
+      // Get goals without ordering to avoid composite index requirement
+      const goals = await this.getWhere<DailyGoal>(
+        COLLECTIONS.DAILY_GOALS,
+        'student_id',
+        '==',
+        studentId
+      );
 
-    // Sort by created_at desc client-side
-    const sorted = goals.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
-    console.log('🔍 [GoalService] Sorted goals:', sorted.length);
-    return sorted;
+      // Sort by created_at desc client-side
+      const sorted = goals.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+      return limit ? sorted.slice(0, limit) : sorted;
+    } catch (error) {
+      console.error('Error fetching goals by student:', error);
+      throw error;
+    }
   }
 
   static async getTodaysGoal(studentId: string): Promise<DailyGoal | null> {
-    console.log('📅 [GoalService] getTodaysGoal - studentId:', studentId);
-    // Get start and end of today in UTC
-    const now = new Date();
-    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+    try {
+      // Get start and end of today in UTC
+      const now = new Date();
+      const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+      const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
 
-    console.log('📅 [GoalService] Date range:', {
-      now: now.toISOString(),
-      startOfDay: startOfDay.toISOString(),
-      endOfDay: endOfDay.toISOString()
-    });
+      // Firestore Timestamp
+      const { Timestamp } = await import('firebase/firestore');
+      const startTimestamp = Timestamp.fromDate(startOfDay);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
 
-    // Firestore Timestamp
-    const { Timestamp } = await import('firebase/firestore');
-    const startTimestamp = Timestamp.fromDate(startOfDay);
-    const endTimestamp = Timestamp.fromDate(endOfDay);
+      // Get all goals for the student (uses single-field index)
+      const allGoals = await this.getGoalsByStudent(studentId);
 
-    // Get all goals for the student (uses single-field index)
-    const allGoals = await this.getGoalsByStudent(studentId);
-    console.log('📅 [GoalService] Total goals for student:', allGoals.length);
-
-    // Filter for today's goals client-side
-    const todaysGoals = allGoals.filter(goal => {
-      // goal.created_at is actually a Firestore Timestamp at runtime
-      const goalTimestamp = goal.created_at as any;
-      const goalTime = goalTimestamp.toMillis ? goalTimestamp.toMillis() : goalTimestamp.getTime();
-      const startTime = startTimestamp.toMillis();
-      const endTime = endTimestamp.toMillis();
-      const isToday = goalTime >= startTime && goalTime < endTime;
-      
-      console.log('📅 [GoalService] Checking goal:', {
-        goalId: goal.id,
-        goalTime: new Date(goalTime).toISOString(),
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        isToday,
-        goalText: goal.goal_text?.substring(0, 30)
+      // Filter for today's goals client-side
+      const todaysGoals = allGoals.filter(goal => {
+        // goal.created_at is actually a Firestore Timestamp at runtime
+        const goalTimestamp = goal.created_at as any;
+        const goalTime = goalTimestamp.toMillis ? goalTimestamp.toMillis() : goalTimestamp.getTime();
+        const startTime = startTimestamp.toMillis();
+        const endTime = endTimestamp.toMillis();
+        return goalTime >= startTime && goalTime < endTime;
       });
-      
-      return isToday;
-    });
-    
-    console.log('📅 [GoalService] Today\'s goals found:', todaysGoals.length);
-    const result = todaysGoals.length > 0 ? todaysGoals[0] : null;
-    console.log('📅 [GoalService] Returning today\'s goal:', result ? { id: result.id, text: result.goal_text?.substring(0, 50) } : 'null');
 
-    return result;
+      return todaysGoals.length > 0 ? todaysGoals[0] : null;
+    } catch (error) {
+      console.error('Error fetching today\'s goal:', error);
+      throw error;
+    }
   }
-// Add compound query support to FirestoreService
 
   static async getPendingGoalsForMentor(mentorId: string): Promise<DailyGoal[]> {
-    // This would need a compound query or client-side filtering
-    // For now, we'll get all pending goals and filter client-side
-    const pendingGoals = await this.getWhere<DailyGoal>(
-      COLLECTIONS.DAILY_GOALS,
-      'status',
-      '==',
-      'pending'
-    );
-    
-    // Filter by mentor's students (would need student data)
-    return pendingGoals;
+    try {
+      // This would need a compound query or client-side filtering
+      // For now, we'll get all pending goals and filter client-side
+      const pendingGoals = await this.getWhere<DailyGoal>(
+        COLLECTIONS.DAILY_GOALS,
+        'status',
+        '==',
+        'pending'
+      );
+
+      // Filter by mentor's students (would need student data)
+      return pendingGoals;
+    } catch (error) {
+      console.error('Error fetching pending goals for mentor:', error);
+      throw error;
+    }
   }
 
   static async updateGoal(id: string, goalData: Partial<DailyGoal>): Promise<void> {
-    return this.update<DailyGoal>(COLLECTIONS.DAILY_GOALS, id, goalData);
+    try {
+      return await this.update<DailyGoal>(COLLECTIONS.DAILY_GOALS, id, goalData);
+    } catch (error) {
+      console.error('Error updating goal:', error);
+      throw error;
+    }
   }
 
   static async reviewGoal(
@@ -175,54 +222,93 @@ export class GoalService extends FirestoreService {
     status: 'approved' | 'reviewed',
     mentorComment?: string
   ): Promise<void> {
-    return this.updateGoal(id, {
-      status,
-      reviewed_by: reviewerId,
-      reviewed_at: new Date(),
-      ...(mentorComment ? { mentor_comment: mentorComment } : {})
-    });
+    try {
+      return await this.updateGoal(id, {
+        status,
+        reviewed_by: reviewerId,
+        reviewed_at: new Date(),
+        ...(mentorComment ? { mentor_comment: mentorComment } : {})
+      });
+    } catch (error) {
+      console.error('Error reviewing goal:', error);
+      throw error;
+    }
   }
 }
 
 // Daily Reflection Service
 export class ReflectionService extends FirestoreService {
+  static async getAllReflections(limit = 50, startAfter?: any): Promise<DailyReflection[]> {
+    try {
+      return await this.getAll<DailyReflection>(COLLECTIONS.DAILY_REFLECTIONS, 'created_at', 'desc', limit);
+    } catch (error) {
+      console.error('Error fetching all reflections:', error);
+      throw error;
+    }
+  }
+
   static async createReflection(reflectionData: Omit<DailyReflection, 'id' | 'created_at'>): Promise<string> {
-    return this.create<DailyReflection>(COLLECTIONS.DAILY_REFLECTIONS, reflectionData as any);
+    try {
+      return await this.create<DailyReflection>(COLLECTIONS.DAILY_REFLECTIONS, reflectionData as any);
+    } catch (error) {
+      console.error('Error creating reflection:', error);
+      throw error;
+    }
   }
 
   static async getReflectionsByStudent(studentId: string): Promise<DailyReflection[]> {
-    // Get without ordering to avoid composite index requirement
-    const reflections = await this.getWhere<DailyReflection>(
-      COLLECTIONS.DAILY_REFLECTIONS,
-      'student_id',
-      '==',
-      studentId
-    );
-    // Sort by created_at desc client-side
-    return reflections.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    try {
+      // Get without ordering to avoid composite index requirement
+      const reflections = await this.getWhere<DailyReflection>(
+        COLLECTIONS.DAILY_REFLECTIONS,
+        'student_id',
+        '==',
+        studentId
+      );
+      // Sort by created_at desc client-side
+      return reflections.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    } catch (error) {
+      console.error('Error fetching reflections by student:', error);
+      throw error;
+    }
   }
 
   static async getReflectionByGoal(goalId: string): Promise<DailyReflection | null> {
-    const reflections = await this.getWhere<DailyReflection>(
-      COLLECTIONS.DAILY_REFLECTIONS,
-      'goal_id',
-      '==',
-      goalId
-    );
-    return reflections.length > 0 ? reflections[0] : null;
+    try {
+      const reflections = await this.getWhere<DailyReflection>(
+        COLLECTIONS.DAILY_REFLECTIONS,
+        'goal_id',
+        '==',
+        goalId
+      );
+      return reflections.length > 0 ? reflections[0] : null;
+    } catch (error) {
+      console.error('Error fetching reflection by goal:', error);
+      throw error;
+    }
   }
 
   static async getPendingReflectionsForMentor(mentorId: string): Promise<DailyReflection[]> {
-    return this.getWhere<DailyReflection>(
-      COLLECTIONS.DAILY_REFLECTIONS,
-      'status',
-      '==',
-      'pending'
-    );
+    try {
+      return await this.getWhere<DailyReflection>(
+        COLLECTIONS.DAILY_REFLECTIONS,
+        'status',
+        '==',
+        'pending'
+      );
+    } catch (error) {
+      console.error('Error fetching pending reflections for mentor:', error);
+      throw error;
+    }
   }
 
   static async updateReflection(id: string, reflectionData: Partial<DailyReflection>): Promise<void> {
-    return this.update<DailyReflection>(COLLECTIONS.DAILY_REFLECTIONS, id, reflectionData);
+    try {
+      return await this.update<DailyReflection>(COLLECTIONS.DAILY_REFLECTIONS, id, reflectionData);
+    } catch (error) {
+      console.error('Error updating reflection:', error);
+      throw error;
+    }
   }
 
   static async reviewReflection(
@@ -232,103 +318,153 @@ export class ReflectionService extends FirestoreService {
     mentorNotes?: string,
     mentorAssessment?: 'needs_improvement' | 'on_track' | 'exceeds_expectations'
   ): Promise<void> {
-    const updateData: Partial<DailyReflection> = {
-      status,
-      reviewed_by: reviewerId,
-      reviewed_at: new Date(),
-      feedback_given_at: new Date(),
-      mentor_notes: mentorNotes
-    };
-    
-    if (mentorAssessment) {
-      updateData.mentor_assessment = mentorAssessment;
+    try {
+      const updateData: Partial<DailyReflection> = {
+        status,
+        reviewed_by: reviewerId,
+        reviewed_at: new Date(),
+        feedback_given_at: new Date(),
+        mentor_notes: mentorNotes
+      };
+
+      if (mentorAssessment) {
+        updateData.mentor_assessment = mentorAssessment;
+      }
+
+      return await this.updateReflection(id, updateData);
+    } catch (error) {
+      console.error('Error reviewing reflection:', error);
+      throw error;
     }
-    
-    return this.updateReflection(id, updateData);
   }
 
   static async markReflectionAsRead(id: string): Promise<void> {
-    return this.updateReflection(id, {
-      is_read_by_student: true
-    });
+    try {
+      return await this.updateReflection(id, {
+        is_read_by_student: true
+      });
+    } catch (error) {
+      console.error('Error marking reflection as read:', error);
+      throw error;
+    }
   }
 }
 
 // Pair Programming Service
 export class PairProgrammingService extends FirestoreService {
   static async createRequest(requestData: Omit<PairProgrammingRequest, 'id'>): Promise<string> {
-    return this.create<PairProgrammingRequest>(COLLECTIONS.PAIR_PROGRAMMING_REQUESTS, requestData);
+    try {
+      return await this.create<PairProgrammingRequest>(COLLECTIONS.PAIR_PROGRAMMING_REQUESTS, requestData);
+    } catch (error) {
+      console.error('Error creating pair programming request:', error);
+      throw error;
+    }
   }
 
   static async getRequestsByStudent(studentId: string): Promise<PairProgrammingRequest[]> {
-    // Get without ordering to avoid composite index requirement
-    const requests = await this.getWhere<PairProgrammingRequest>(
-      COLLECTIONS.PAIR_PROGRAMMING_REQUESTS,
-      'student_id',
-      '==',
-      studentId
-    );
-    // Sort by created_at desc client-side
-    return requests.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    try {
+      // Get without ordering to avoid composite index requirement
+      const requests = await this.getWhere<PairProgrammingRequest>(
+        COLLECTIONS.PAIR_PROGRAMMING_REQUESTS,
+        'student_id',
+        '==',
+        studentId
+      );
+      // Sort by created_at desc client-side
+      return requests.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    } catch (error) {
+      console.error('Error fetching requests by student:', error);
+      throw error;
+    }
   }
 
   static async getPendingRequests(): Promise<PairProgrammingRequest[]> {
-    return this.getWhere<PairProgrammingRequest>(
-      COLLECTIONS.PAIR_PROGRAMMING_REQUESTS,
-      'status',
-      '==',
-      'pending'
-    );
+    try {
+      return await this.getWhere<PairProgrammingRequest>(
+        COLLECTIONS.PAIR_PROGRAMMING_REQUESTS,
+        'status',
+        '==',
+        'pending'
+      );
+    } catch (error) {
+      console.error('Error fetching pending requests:', error);
+      throw error;
+    }
   }
 
   static async getRequestsByMentor(mentorId: string): Promise<PairProgrammingRequest[]> {
-    return this.getWhere<PairProgrammingRequest>(
-      COLLECTIONS.PAIR_PROGRAMMING_REQUESTS,
-      'mentor_id',
-      '==',
-      mentorId
-    );
+    try {
+      return await this.getWhere<PairProgrammingRequest>(
+        COLLECTIONS.PAIR_PROGRAMMING_REQUESTS,
+        'mentor_id',
+        '==',
+        mentorId
+      );
+    } catch (error) {
+      console.error('Error fetching requests by mentor:', error);
+      throw error;
+    }
   }
 
   static async assignMentor(requestId: string, mentorId: string): Promise<void> {
-    return this.update<PairProgrammingRequest>(COLLECTIONS.PAIR_PROGRAMMING_REQUESTS, requestId, {
-      mentor_id: mentorId,
-      status: 'assigned',
-      assigned_at: new Date()
-    });
+    try {
+      return await this.update<PairProgrammingRequest>(COLLECTIONS.PAIR_PROGRAMMING_REQUESTS, requestId, {
+        mentor_id: mentorId,
+        status: 'assigned',
+        assigned_at: new Date()
+      });
+    } catch (error) {
+      console.error('Error assigning mentor:', error);
+      throw error;
+    }
   }
 
   static async completeSession(requestId: string, feedback: string): Promise<void> {
-    return this.update<PairProgrammingRequest>(COLLECTIONS.PAIR_PROGRAMMING_REQUESTS, requestId, {
-      status: 'completed',
-      feedback,
-      completed_at: new Date()
-    });
+    try {
+      return await this.update<PairProgrammingRequest>(COLLECTIONS.PAIR_PROGRAMMING_REQUESTS, requestId, {
+        status: 'completed',
+        feedback,
+        completed_at: new Date()
+      });
+    } catch (error) {
+      console.error('Error completing session:', error);
+      throw error;
+    }
   }
 
   static async cancelRequest(requestId: string): Promise<void> {
-    return this.update<PairProgrammingRequest>(COLLECTIONS.PAIR_PROGRAMMING_REQUESTS, requestId, {
-      status: 'cancelled'
-    });
+    try {
+      return await this.update<PairProgrammingRequest>(COLLECTIONS.PAIR_PROGRAMMING_REQUESTS, requestId, {
+        status: 'cancelled'
+      });
+    } catch (error) {
+      console.error('Error cancelling request:', error);
+      throw error;
+    }
   }
 }
 
 // Attendance Service
 export class AttendanceService extends FirestoreService {
   static async markAttendance(attendanceData: Omit<Attendance, 'id'>): Promise<string> {
-    // Check if attendance already exists for this student and date
-    const existingAttendance = await this.getStudentAttendanceByDate(
-      attendanceData.student_id,
-      attendanceData.date
-    );
+    try {
+      // Check if attendance already exists for this student and date
+      const existingAttendance = await this.getStudentAttendanceByDate(
+        attendanceData.student_id,
+        attendanceData.date
+      );
 
-    if (existingAttendance) {
-      // Update existing attendance
-      await this.update<Attendance>(COLLECTIONS.ATTENDANCE, existingAttendance.id, attendanceData);
-      return existingAttendance.id;
-    } else {
-      // Create new attendance record
-      return this.create<Attendance>(COLLECTIONS.ATTENDANCE, attendanceData);
+      if (existingAttendance) {
+        // Update existing attendance
+        await this.update<Attendance>(COLLECTIONS.ATTENDANCE, existingAttendance.id, attendanceData);
+        return existingAttendance.id;
+      } else {
+        // Create new attendance record
+        return await this.create<Attendance>(COLLECTIONS.ATTENDANCE, attendanceData);
+      }
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      throw error;
     }
   }
 
@@ -336,23 +472,28 @@ export class AttendanceService extends FirestoreService {
     studentId: string,
     date: Date
   ): Promise<Attendance | null> {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
 
-    const attendance = await this.getWhere<Attendance>(
-      COLLECTIONS.ATTENDANCE,
-      'student_id',
-      '==',
-      studentId
-    );
+      const attendance = await this.getWhere<Attendance>(
+        COLLECTIONS.ATTENDANCE,
+        'student_id',
+        '==',
+        studentId
+      );
 
-    // Filter by date range (client-side)
-    return attendance.find(record => {
-      const recordDate = record.date instanceof Date ? record.date : new Date(record.date);
-      return recordDate >= startOfDay && recordDate <= endOfDay;
-    }) || null;
+      // Filter by date range (client-side)
+      return attendance.find(record => {
+        const recordDate = record.date instanceof Date ? record.date : new Date(record.date);
+        return recordDate >= startOfDay && recordDate <= endOfDay;
+      }) || null;
+    } catch (error) {
+      console.error('Error fetching student attendance by date:', error);
+      throw error;
+    }
   }
 
   static async getStudentAttendance(
@@ -360,14 +501,19 @@ export class AttendanceService extends FirestoreService {
     startDate?: Date,
     endDate?: Date
   ): Promise<Attendance[]> {
-    return this.getWhere<Attendance>(
-      COLLECTIONS.ATTENDANCE,
-      'student_id',
-      '==',
-      studentId,
-      'date',
-      'desc'
-    );
+    try {
+      return await this.getWhere<Attendance>(
+        COLLECTIONS.ATTENDANCE,
+        'student_id',
+        '==',
+        studentId,
+        'date',
+        'desc'
+      );
+    } catch (error) {
+      console.error('Error fetching student attendance:', error);
+      throw error;
+    }
   }
 
   static async updateAttendanceStatus(
@@ -376,27 +522,32 @@ export class AttendanceService extends FirestoreService {
     goalReviewed: boolean,
     reflectionReviewed: boolean
   ): Promise<void> {
-    const attendance = await this.getStudentAttendanceByDate(studentId, date);
-    
-    if (attendance) {
-      const presentStatus = (goalReviewed && reflectionReviewed) ? 'present' : 'absent';
-      await this.update<Attendance>(COLLECTIONS.ATTENDANCE, attendance.id, {
-        goal_reviewed: goalReviewed,
-        reflection_reviewed: reflectionReviewed,
-        present_status: presentStatus
-      });
-    } else {
-      // Create new attendance record
-      const presentStatus = (goalReviewed && reflectionReviewed) ? 'present' : 'absent';
-      await this.markAttendance({
-        student_id: studentId,
-        date,
-        goal_reviewed: goalReviewed,
-        reflection_reviewed: reflectionReviewed,
-        present_status: presentStatus,
-        created_at: new Date(),
-        updated_at: new Date()
-      });
+    try {
+      const attendance = await this.getStudentAttendanceByDate(studentId, date);
+      
+      if (attendance) {
+        const presentStatus = (goalReviewed && reflectionReviewed) ? 'present' : 'absent';
+        await this.update<Attendance>(COLLECTIONS.ATTENDANCE, attendance.id, {
+          goal_reviewed: goalReviewed,
+          reflection_reviewed: reflectionReviewed,
+          present_status: presentStatus
+        });
+      } else {
+        // Create new attendance record
+        const presentStatus = (goalReviewed && reflectionReviewed) ? 'present' : 'absent';
+        await this.markAttendance({
+          student_id: studentId,
+          date,
+          goal_reviewed: goalReviewed,
+          reflection_reviewed: reflectionReviewed,
+          present_status: presentStatus,
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+      }
+    } catch (error) {
+      console.error('Error updating attendance status:', error);
+      throw error;
     }
   }
 }
@@ -404,129 +555,272 @@ export class AttendanceService extends FirestoreService {
 // Leave Request Service
 export class LeaveService extends FirestoreService {
   static async createLeaveRequest(leaveData: Omit<LeaveRequest, 'id'>): Promise<string> {
-    return this.create<LeaveRequest>(COLLECTIONS.LEAVE_REQUESTS, {
-      ...leaveData,
-      status: 'approved' // Auto-approve for now
-    });
+    try {
+      return await this.create<LeaveRequest>(COLLECTIONS.LEAVE_REQUESTS, {
+        ...leaveData,
+        status: 'approved' // Auto-approve for now
+      });
+    } catch (error) {
+      console.error('Error creating leave request:', error);
+      throw error;
+    }
   }
 
   static async getStudentLeaves(studentId: string): Promise<LeaveRequest[]> {
-    return this.getWhere<LeaveRequest>(
-      COLLECTIONS.LEAVE_REQUESTS,
-      'student_id',
-      '==',
-      studentId,
-      'start_date',
-      'desc'
-    );
+    try {
+      return await this.getWhere<LeaveRequest>(
+        COLLECTIONS.LEAVE_REQUESTS,
+        'student_id',
+        '==',
+        studentId,
+        'start_date',
+        'desc'
+      );
+    } catch (error) {
+      console.error('Error fetching student leaves:', error);
+      throw error;
+    }
   }
 
   static async getLeavesByDateRange(startDate: Date, endDate: Date): Promise<LeaveRequest[]> {
-    // This would need a compound query or client-side filtering
-    return this.getAll<LeaveRequest>(COLLECTIONS.LEAVE_REQUESTS, 'start_date', 'desc');
+    try {
+      // This would need a compound query or client-side filtering
+      return await this.getAll<LeaveRequest>(COLLECTIONS.LEAVE_REQUESTS, 'start_date', 'desc');
+    } catch (error) {
+      console.error('Error fetching leaves by date range:', error);
+      throw error;
+    }
   }
 }
 
 // Mentor Notes Service
 export class MentorNotesService extends FirestoreService {
   static async createNote(noteData: Omit<MentorNote, 'id'>): Promise<string> {
-    return this.create<MentorNote>(COLLECTIONS.MENTOR_NOTES, noteData);
+    try {
+      return await this.create<MentorNote>(COLLECTIONS.MENTOR_NOTES, noteData);
+    } catch (error) {
+      console.error('Error creating mentor note:', error);
+      throw error;
+    }
   }
 
   static async getNotesByStudent(studentId: string): Promise<MentorNote[]> {
-    return this.getWhere<MentorNote>(
-      COLLECTIONS.MENTOR_NOTES,
-      'student_id',
-      '==',
-      studentId,
-      'created_at',
-      'desc'
-    );
+    try {
+      return await this.getWhere<MentorNote>(
+        COLLECTIONS.MENTOR_NOTES,
+        'student_id',
+        '==',
+        studentId,
+        'created_at',
+        'desc'
+      );
+    } catch (error) {
+      console.error('Error fetching notes by student:', error);
+      throw error;
+    }
   }
 
   static async getNotesByMentor(mentorId: string): Promise<MentorNote[]> {
-    return this.getWhere<MentorNote>(
-      COLLECTIONS.MENTOR_NOTES,
-      'mentor_id',
-      '==',
-      mentorId,
-      'created_at',
-      'desc'
-    );
+    try {
+      return await this.getWhere<MentorNote>(
+        COLLECTIONS.MENTOR_NOTES,
+        'mentor_id',
+        '==',
+        mentorId,
+        'created_at',
+        'desc'
+      );
+    } catch (error) {
+      console.error('Error fetching notes by mentor:', error);
+      throw error;
+    }
   }
 
   static async updateNote(id: string, noteData: Partial<MentorNote>): Promise<void> {
-    return this.update<MentorNote>(COLLECTIONS.MENTOR_NOTES, id, noteData);
+    try {
+      return await this.update<MentorNote>(COLLECTIONS.MENTOR_NOTES, id, noteData);
+    } catch (error) {
+      console.error('Error updating mentor note:', error);
+      throw error;
+    }
   }
 }
 
 // Admin Service
 export class AdminService extends FirestoreService {
+  // Simple in-memory cache (can be replaced with localStorage for persistence)
+  static campusCache: {
+    [campusId: string]: {
+      students: User[];
+      goals: DailyGoal[];
+      reflections: DailyReflection[];
+      lastFetched: number;
+    }
+  } = {};
+
+  /**
+   * Fetch and cache all campus data for admin dashboard/mentor tab
+   * @param campusId - campus to fetch data for
+   * @param forceRefresh - bypass cache and fetch fresh data
+   */
+  static async getCampusData(campusId: string, forceRefresh = false): Promise<{
+    students: User[];
+    goals: DailyGoal[];
+    reflections: DailyReflection[];
+    lastFetched: number;
+  }> {
+    try {
+      const now = Date.now();
+      const cache = this.campusCache[campusId];
+      // Cache expires after 5 minutes
+      if (!forceRefresh && cache && cache.lastFetched && now - cache.lastFetched < 5 * 60 * 1000) {
+        return cache;
+      }
+
+      // Fetch all students for campus
+      const allUsers = await this.getAllUsers();
+      const students = allUsers.filter(u => u.campus === campusId && !u.isAdmin);
+
+      // Fetch all goals for campus students
+      const studentIds = students.map(s => s.id);
+      const goals = (await GoalService.getAllGoals()).filter(g => studentIds.includes(g.student_id));
+
+      // Fetch all reflections for campus students
+      const reflections = (await ReflectionService.getAllReflections()).filter(r => studentIds.includes(r.student_id));
+
+      // Cache results
+      this.campusCache[campusId] = {
+        students,
+        goals,
+        reflections,
+        lastFetched: now,
+      };
+
+      return this.campusCache[campusId];
+    } catch (error) {
+      console.error('Error fetching campus data:', error);
+      throw error;
+    }
+  }
+
+  static invalidateCampusCache(campusId: string) {
+    delete this.campusCache[campusId];
+  }
   // Get all users with optional filtering
   static async getAllUsers(): Promise<any[]> {
-    return this.getAll<any>(COLLECTIONS.USERS, 'created_at', 'desc');
+    try {
+      return await this.getAll<any>(COLLECTIONS.USERS, 'created_at', 'desc');
+    } catch (error) {
+      console.error('Error fetching all users:', error);
+      throw error;
+    }
   }
 
   // Update user admin status
   static async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
-    return this.update<any>(COLLECTIONS.USERS, userId, { 
-      isAdmin,
-      updated_at: new Date()
-    });
+    try {
+      return await this.update<any>(COLLECTIONS.USERS, userId, { 
+        isAdmin,
+        updated_at: new Date()
+      });
+    } catch (error) {
+      console.error('Error updating user admin status:', error);
+      throw error;
+    }
   }
 
   // Update user status
   static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave'): Promise<void> {
-    return this.update<any>(COLLECTIONS.USERS, userId, { 
-      status,
-      updated_at: new Date()
-    });
+    try {
+      return await this.update<any>(COLLECTIONS.USERS, userId, { 
+        status,
+        updated_at: new Date()
+      });
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      throw error;
+    }
   }
 
   // Delete user (soft delete by setting status to 'inactive')
   static async deleteUser(userId: string): Promise<void> {
-    return this.update<any>(COLLECTIONS.USERS, userId, { 
-      status: 'inactive',
-      deleted_at: new Date(),
-      updated_at: new Date()
-    });
+    try {
+      return await this.update<any>(COLLECTIONS.USERS, userId, { 
+        status: 'inactive',
+        deleted_at: new Date(),
+        updated_at: new Date()
+      });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
   }
 
   // Permanently delete user (use with caution)
   static async permanentlyDeleteUser(userId: string): Promise<void> {
-    return this.delete(COLLECTIONS.USERS, userId);
+    try {
+      return await this.delete(COLLECTIONS.USERS, userId);
+    } catch (error) {
+      console.error('Error permanently deleting user:', error);
+      throw error;
+    }
   }
 
   // Assign mentor to student
   static async assignMentor(studentId: string, mentorId: string): Promise<void> {
-    return this.update<any>(COLLECTIONS.USERS, studentId, { 
-      mentor_id: mentorId,
-      updated_at: new Date()
-    });
+    try {
+      return await this.update<any>(COLLECTIONS.USERS, studentId, { 
+        mentor_id: mentorId,
+        updated_at: new Date()
+      });
+    } catch (error) {
+      console.error('Error assigning mentor:', error);
+      throw error;
+    }
   }
 
   // Get students without mentors
   static async getStudentsWithoutMentor(): Promise<any[]> {
-    const allUsers = await this.getAllUsers();
-    return allUsers.filter(user => !user.mentor_id && !user.isAdmin);
+    try {
+      const allUsers = await this.getAllUsers();
+      return allUsers.filter(user => !user.mentor_id && !user.isAdmin);
+    } catch (error) {
+      console.error('Error getting students without mentor:', error);
+      throw error;
+    }
   }
 
   // Get potential mentors (students who can mentor others)
   static async getPotentialMentors(): Promise<any[]> {
-    const allUsers = await this.getAllUsers();
-    // Return all non-admin users who could potentially be mentors
-    return allUsers.filter(user => !user.isAdmin);
+    try {
+      const allUsers = await this.getAllUsers();
+      // Return all non-admin users who could potentially be mentors
+      return allUsers.filter(user => !user.isAdmin);
+    } catch (error) {
+      console.error('Error getting potential mentors:', error);
+      throw error;
+    }
   }
 
   // Get students by mentor
   static async getStudentsByMentor(mentorId: string): Promise<any[]> {
-    return this.getWhere<any>(COLLECTIONS.USERS, 'mentor_id', '==', mentorId);
+    try {
+      return await this.getWhere<any>(COLLECTIONS.USERS, 'mentor_id', '==', mentorId);
+    } catch (error) {
+      console.error('Error getting students by mentor:', error);
+      throw error;
+    }
   }
 
   // Get student's current phase (based on latest goal)
   static async getStudentCurrentPhase(studentId: string): Promise<string | null> {
-    const goals = await GoalService.getGoalsByStudent(studentId, 1);
-    return goals.length > 0 ? goals[0].phase_id : null;
+    try {
+      const goals = await GoalService.getGoalsByStudent(studentId, 1);
+      return goals.length > 0 ? goals[0].phase_id : null;
+    } catch (error) {
+      console.error('Error getting student current phase:', error);
+      throw error;
+    }
   }
 
   // Get suggested mentors for a student based on phase progression
@@ -666,8 +960,13 @@ export class MentorshipService extends FirestoreService {
    * Get available mentors (with open slots)
    */
   static async getAvailableMentors(): Promise<MentorWithCapacity[]> {
-    const allMentors = await this.getAllMentorsWithCapacity();
-    return allMentors.filter(m => m.available_slots > 0);
+    try {
+      const allMentors = await this.getAllMentorsWithCapacity();
+      return allMentors.filter(m => m.available_slots > 0);
+    } catch (error) {
+      console.error('Error getting available mentors:', error);
+      return [];
+    }
   }
 
   /**
