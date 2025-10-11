@@ -4,8 +4,6 @@ import { initialPhases, detailedTopics } from '../../data/initialData';
 interface EditablePhase {
   name: string;
   order: number;
-  start_date: Date;
-  end_date: Date;
   isSenior?: boolean;
   topics: EditableTopic[];
   isEdited?: boolean;
@@ -23,27 +21,45 @@ const CurriculumAdminPanel: React.FC = () => {
   // Convert initial data to editable format
   const [phases, setPhases] = useState<EditablePhase[]>([]);
   const [csvData, setCsvData] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load phases and topics from initialData
-    const loadedPhases: EditablePhase[] = initialPhases.map(phase => ({
-      ...phase,
-      topics: (detailedTopics[phase.name] || []).map(topic => ({
-        name: topic.name,
-        order: topic.order,
-        deliverable: topic.deliverable,
-        description: topic.description || '',
+    // Load phases directly from local data - no async needed
+    try {
+      console.log('Loading curriculum admin panel...');
+      setLoading(true);
+      setError(null);
+      
+      const loadedPhases: EditablePhase[] = initialPhases.map(phase => ({
+        name: phase.name,
+        order: phase.order,
+        isSenior: phase.isSenior || false,
+        topics: (detailedTopics[phase.name] || []).map(topic => ({
+          name: topic.name,
+          order: topic.order,
+          deliverable: topic.deliverable,
+          description: topic.description || '',
+          isEdited: false
+        })),
         isEdited: false
-      })),
-      isEdited: false,
-      isSenior: (phase as any).isSenior || false
-    }));
-    // ensure senior phases render last by default sorting for display
-    loadedPhases.sort((a, b) => {
-      if ((a.isSenior ? 1 : 0) !== (b.isSenior ? 1 : 0)) return (a.isSenior ? 1 : 0) - (b.isSenior ? 1 : 0);
-      return a.order - b.order;
-    });
-    setPhases(loadedPhases);
+      }));
+      
+      loadedPhases.sort((a, b) => {
+        if ((a.isSenior ? 1 : 0) !== (b.isSenior ? 1 : 0)) return (a.isSenior ? 1 : 0) - (b.isSenior ? 1 : 0);
+        return a.order - b.order;
+      });
+      
+      console.log('Loaded phases:', loadedPhases.length);
+      setPhases(loadedPhases);
+      setLoading(false);
+      console.log('Curriculum admin panel loaded successfully');
+      
+    } catch (err) {
+      console.error('Error loading phases:', err);
+      setError('Failed to load curriculum phases. See console for details.');
+      setLoading(false);
+    }
   }, []);
 
   // Add new phase
@@ -53,8 +69,6 @@ const CurriculumAdminPanel: React.FC = () => {
       {
         name: '',
         order: phases.length + 1,
-        start_date: new Date(),
-        end_date: new Date(),
         isSenior: false,
         topics: [],
         isEdited: true
@@ -84,10 +98,7 @@ const CurriculumAdminPanel: React.FC = () => {
       updated[idx].name = value;
     } else if (field === 'order' && typeof value === 'number') {
       updated[idx].order = value;
-    } else if (field === 'start_date' && value instanceof Date) {
-      updated[idx].start_date = value;
-    } else if (field === 'end_date' && value instanceof Date) {
-      updated[idx].end_date = value;
+    // Removed start_date and end_date handling
     } else if (field === 'topics' && Array.isArray(value)) {
       updated[idx].topics = value;
     }
@@ -174,8 +185,6 @@ const CurriculumAdminPanel: React.FC = () => {
           phase = {
             name: phaseName,
             order: Number(phaseOrder),
-            start_date: new Date(),
-            end_date: new Date(),
             topics: [],
             isEdited: false,
             isSenior: isSenior
@@ -208,88 +217,96 @@ const CurriculumAdminPanel: React.FC = () => {
   return (
     <div className="p-6 bg-white rounded shadow">
       <h2 className="text-xl font-bold mb-4">Curriculum Admin Panel</h2>
-      <button className="mb-4 px-4 py-2 bg-blue-600 text-white rounded" onClick={addPhase}>Add Phase</button>
-      <button className="mb-4 ml-2 px-4 py-2 bg-green-600 text-white rounded" onClick={exportToCSV}>Export to CSV</button>
-      <input type="file" accept=".csv" className="mb-4 ml-2" onChange={handleCSVUpload} />
-      <div className="overflow-x-auto">
-        <table className="min-w-full border">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-2 py-1">Phase</th>
-              <th className="border px-2 py-1">Order</th>
-              <th className="border px-2 py-1">Start Date</th>
-              <th className="border px-2 py-1">End Date</th>
-              <th className="border px-2 py-1">Topics</th>
-              <th className="border px-2 py-1">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {phases.map((phase, idx) => (
-              <tr key={idx}>
-                <td className="border px-2 py-1">
-                  <input value={phase.name} onChange={e => handlePhaseChange(idx, 'name', e.target.value)} className="w-32 border rounded px-1" />
-                </td>
-                <td className="border px-2 py-1">
-                  <input type="number" value={phase.order} onChange={e => handlePhaseChange(idx, 'order', Number(e.target.value))} className="w-16 border rounded px-1" />
-                </td>
-                <td className="border px-2 py-1">
-                  <input type="date" value={phase.start_date.toISOString().slice(0,10)} onChange={e => handlePhaseChange(idx, 'start_date', new Date(e.target.value))} className="w-32 border rounded px-1" />
-                </td>
-                <td className="border px-2 py-1">
-                  <input type="date" value={phase.end_date.toISOString().slice(0,10)} onChange={e => handlePhaseChange(idx, 'end_date', new Date(e.target.value))} className="w-32 border rounded px-1" />
-                </td>
-                <td className="border px-2 py-1">
-                  <table className="border">
-                    <thead>
-                      <tr>
-                        <th className="border px-1">Topic</th>
-                        <th className="border px-1">Order</th>
-                        <th className="border px-1">Deliverable</th>
-                        <th className="border px-1">Description</th>
-                        <th className="border px-1">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {phase.topics.map((topic, tIdx) => (
-                        <tr key={tIdx}>
-                          <td className="border px-1">
-                            <input value={topic.name} onChange={e => handleTopicChange(idx, tIdx, 'name', e.target.value)} className="w-24 border rounded px-1" />
-                          </td>
-                          <td className="border px-1">
-                            <input type="number" value={topic.order} onChange={e => handleTopicChange(idx, tIdx, 'order', Number(e.target.value))} className="w-12 border rounded px-1" />
-                          </td>
-                          <td className="border px-1">
-                            <input value={topic.deliverable} onChange={e => handleTopicChange(idx, tIdx, 'deliverable', e.target.value)} className="w-24 border rounded px-1" />
-                          </td>
-                          <td className="border px-1">
-                            <input value={topic.description} onChange={e => handleTopicChange(idx, tIdx, 'description', e.target.value)} className="w-32 border rounded px-1" />
-                          </td>
-                          <td className="border px-1">
-                            {/* Future: Add delete/edit buttons */}
-                          </td>
-                        </tr>
-                      ))}
-                      <tr>
-                        <td colSpan={5} className="border px-1 text-center">
-                          <button className="px-2 py-1 bg-blue-500 text-white rounded" onClick={() => addTopic(idx)}>Add Topic</button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </td>
-                <td className="border px-2 py-1">
-                  {/* Future: Add delete/edit buttons for phase */}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {csvData && (
-        <div className="mt-4">
-          <h3 className="font-bold">CSV Preview:</h3>
-          <pre className="bg-gray-100 p-2 rounded text-xs max-h-40 overflow-auto">{csvData}</pre>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mb-4"></div>
+          <span className="text-gray-600">Loading curriculum phases...</span>
         </div>
+      ) : error ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <strong className="font-bold">Error:</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      ) : (
+        <>
+          <button className="mb-4 px-4 py-2 bg-blue-600 text-white rounded" onClick={addPhase}>Add Phase</button>
+          <button className="mb-4 ml-2 px-4 py-2 bg-green-600 text-white rounded" onClick={exportToCSV}>Export to CSV</button>
+          <input type="file" accept=".csv" className="mb-4 ml-2" onChange={handleCSVUpload} />
+          <div className="overflow-x-auto">
+            <table className="min-w-full border">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border px-2 py-1">Phase</th>
+                  <th className="border px-2 py-1">Order</th>
+                  {/* Removed Start Date and End Date columns */}
+                  <th className="border px-2 py-1">Topics</th>
+                  <th className="border px-2 py-1">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {phases.map((phase, idx) => (
+                  <tr key={idx}>
+                    <td className="border px-2 py-1">
+                      <input value={phase.name} onChange={e => handlePhaseChange(idx, 'name', e.target.value)} className="w-32 border rounded px-1" />
+                    </td>
+                    <td className="border px-2 py-1">
+                      <input type="number" value={phase.order} onChange={e => handlePhaseChange(idx, 'order', Number(e.target.value))} className="w-16 border rounded px-1" />
+                    </td>
+                    {/* Removed Start Date and End Date inputs */}
+                    <td className="border px-2 py-1">
+                      <table className="border">
+                        <thead>
+                          <tr>
+                            <th className="border px-1">Topic</th>
+                            <th className="border px-1">Order</th>
+                            <th className="border px-1">Deliverable</th>
+                            <th className="border px-1">Description</th>
+                            <th className="border px-1">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {phase.topics.map((topic, tIdx) => (
+                            <tr key={tIdx}>
+                              <td className="border px-1">
+                                <input value={topic.name} onChange={e => handleTopicChange(idx, tIdx, 'name', e.target.value)} className="w-24 border rounded px-1" />
+                              </td>
+                              <td className="border px-1">
+                                <input type="number" value={topic.order} onChange={e => handleTopicChange(idx, tIdx, 'order', Number(e.target.value))} className="w-12 border rounded px-1" />
+                              </td>
+                              <td className="border px-1">
+                                <input value={topic.deliverable} onChange={e => handleTopicChange(idx, tIdx, 'deliverable', e.target.value)} className="w-24 border rounded px-1" />
+                              </td>
+                              <td className="border px-1">
+                                <input value={topic.description} onChange={e => handleTopicChange(idx, tIdx, 'description', e.target.value)} className="w-32 border rounded px-1" />
+                              </td>
+                              <td className="border px-1">
+                                {/* Future: Add delete/edit buttons */}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr>
+                            <td colSpan={5} className="border px-1 text-center">
+                              <button className="px-2 py-1 bg-blue-500 text-white rounded" onClick={() => addTopic(idx)}>Add Topic</button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                    <td className="border px-2 py-1">
+                      {/* Future: Add delete/edit buttons for phase */}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {csvData && (
+            <div className="mt-4">
+              <h3 className="font-bold">CSV Preview:</h3>
+              <pre className="bg-gray-100 p-2 rounded text-xs max-h-40 overflow-auto">{csvData}</pre>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

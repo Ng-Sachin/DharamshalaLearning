@@ -61,6 +61,7 @@ const GoalSetting: React.FC = () => {
   const [feedback, setFeedback] = useState('');
   const [feedbackError, setFeedbackError] = useState('');
   const [feedbackHtml, setFeedbackHtml] = useState('');
+  const [goalRating, setGoalRating] = useState<number | null>(null);
   // Toast state
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -87,6 +88,22 @@ const GoalSetting: React.FC = () => {
 
       setPhases(phasesData);
       setTodaysGoal(goalData);
+      
+      // Load existing feedback if goal exists
+      if (goalData?.goal_feedback) {
+        setFeedback(goalData.goal_feedback);
+        const html = markdownToHtml(goalData.goal_feedback);
+        setFeedbackHtml(html);
+        
+        // Parse rating from existing feedback if available
+        const ratingMatch = goalData.goal_feedback.match(/\*\*INTERNAL RATING:\s*\[(\d+)\]\*\*/i);
+        if (ratingMatch) {
+          const rating = parseInt(ratingMatch[1], 10);
+          if (rating >= 0 && rating <= 100) {
+            setGoalRating(rating);
+          }
+        }
+      }
       // Get topics count for all phases
       const topicsData = await Promise.all(phasesData.map(phase => TopicService.getTopicsByPhase(phase.id)));
       const totalTopics = topicsData.reduce((acc, topics) => acc + topics.length, 0);
@@ -118,6 +135,23 @@ const GoalSetting: React.FC = () => {
       loadTopics(formData.phase_id);
     }
   }, [formData.phase_id]);
+
+  // Keyboard handler for ESC to close feedback drawer
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showFeedback) {
+        setShowFeedback(false);
+      }
+    };
+
+    if (showFeedback) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showFeedback]);
 
   // Load topics for selected phase
   const loadTopics = async (phaseId: string) => {
@@ -154,7 +188,9 @@ const GoalSetting: React.FC = () => {
         // Update existing goal
         await GoalService.updateGoal(goalId, {
           ...formData,
-          status: 'pending'
+          status: 'pending',
+          goal_rating: goalRating || undefined,
+          goal_feedback: feedback || undefined
         });
       } else {
         // Create new goal
@@ -162,6 +198,8 @@ const GoalSetting: React.FC = () => {
           ...formData,
           student_id: userData?.id || '',
           status: 'pending',
+          goal_rating: goalRating || undefined,
+          goal_feedback: feedback || undefined,
           created_at: formData.goal_date || new Date()
         });
       }
@@ -413,6 +451,7 @@ const GoalSetting: React.FC = () => {
                       setFeedbackError('');
                       setFeedback('');
                       setFeedbackHtml('');
+                      setGoalRating(null);
                       try {
                         if (!formData.goal_text) {
                           setFeedbackError('Please enter your goal first.');
@@ -446,8 +485,43 @@ const GoalSetting: React.FC = () => {
                         });
 
                         const aiText = response.feedback || 'No feedback received.';
-                        setFeedback(aiText);
-                        const html = markdownToHtml(aiText);
+                        
+                        // Parse and remove internal rating from feedback text
+                        let displayText = aiText;
+                        let extractedRating = null;
+                        
+                        // Try multiple patterns to extract rating
+                        const patterns = [
+                          /\*\*INTERNAL RATING:\s*\[(\d+)\]\*\*/i,
+                          /INTERNAL RATING:\s*\[(\d+)\]/i,
+                          /INTERNAL RATING:\s*(\d+)/i,
+                          /\[(\d+)\]/i  // fallback for just numbers in brackets
+                        ];
+                        
+                        for (const pattern of patterns) {
+                          const match = aiText.match(pattern);
+                          if (match) {
+                            const rating = parseInt(match[1], 10);
+                            if (rating >= 0 && rating <= 100) {
+                              extractedRating = rating;
+                              setGoalRating(rating);
+                              break;
+                            }
+                          }
+                        }
+                        
+                        // Remove all variations of internal rating text from display
+                        if (extractedRating !== null) {
+                          displayText = aiText
+                            .replace(/\*\*INTERNAL RATING:\s*\[\d+\]\*\*/gi, '')
+                            .replace(/INTERNAL RATING:\s*\[\d+\]/gi, '')
+                            .replace(/INTERNAL RATING:\s*\d+/gi, '')
+                            .replace(/^\s*\[\d+\]\s*$/gm, '') // remove lines that are just [number]
+                            .trim();
+                        }
+                        
+                        setFeedback(displayText);
+                        const html = markdownToHtml(displayText);
                         setFeedbackHtml(html);
 
                         // Show notification if using fallback (no API key)
@@ -544,18 +618,28 @@ const GoalSetting: React.FC = () => {
     {/* Slide-in drawer for AI-generated feedback (shown when feedback is requested) */}
     {showFeedback && (
       <>
-        {/* Backdrop */}
+        {/* Semi-transparent overlay for focus, but allows interaction */}
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 z-40"
-          onClick={() => setShowFeedback(false)}
+          className="fixed inset-0 bg-black bg-opacity-20 z-40 pointer-events-none"
           aria-hidden
         />
 
-        {/* Drawer */}
-        <aside className="fixed right-0 top-0 h-full w-96 bg-white z-50 shadow-xl transform transition-transform duration-300" role="dialog" aria-modal="true">
-          <div className="flex items-center justify-between p-4 border-b">
-            <h3 className="text-lg font-semibold text-purple-700">SMART Feedback</h3>
-            <button onClick={() => setShowFeedback(false)} className="text-gray-500 hover:text-gray-700" aria-label="Close feedback panel">✕</button>
+        {/* Drawer - slides in from right, positioned to not overlap input form */}
+        <aside className={`fixed right-0 top-0 h-full bg-white z-50 shadow-2xl transform transition-transform duration-300 ease-in-out w-full sm:w-[400px] max-w-[90vw] pointer-events-auto ${
+          showFeedback ? 'translate-x-0' : 'translate-x-full'
+        }`} role="dialog" aria-modal="true">
+          <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-purple-50 to-blue-50">
+            <h3 className="text-lg font-semibold text-purple-700 flex items-center gap-2">
+              <span className="text-purple-600">💡</span>
+              SMART Feedback
+            </h3>
+            <button
+              onClick={() => setShowFeedback(false)}
+              className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center text-xl font-bold transition-colors"
+              aria-label="Close feedback panel"
+            >
+              ×
+            </button>
           </div>
           <div className="p-4 overflow-y-auto h-[calc(100%-64px)]">
             <div className="mb-4 text-sm text-gray-700">
@@ -569,20 +653,62 @@ const GoalSetting: React.FC = () => {
               </ul>
             </div>
 
-            <div className="bg-gray-50 border border-gray-100 rounded p-3 text-gray-700 min-h-[120px]">
-              {feedbackError && <div className="text-red-600">{feedbackError}</div>}
-              {!feedback && !feedbackError && feedbackLoading && <div>Loading feedback...</div>}
+            {/* Goal Rating Progress Bar */}
+            {goalRating !== null && (
+              <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Goal Perfection Level</span>
+                  <span className="text-sm font-bold text-purple-600">{goalRating}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                  <div
+                    className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all duration-700 ease-out"
+                    style={{ width: `${goalRating}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {goalRating >= 80 ? '🌟 Excellent goal!' : goalRating >= 60 ? '👍 Good foundation!' : '💡 Room for improvement'}
+                </p>
+              </div>
+            )}
+
+            <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 text-gray-700 min-h-[200px]">
+              {feedbackError && <div className="text-red-600 font-medium">{feedbackError}</div>}
+              {!feedback && !feedbackError && feedbackLoading && (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                  <p className="text-gray-600">Getting your personalized feedback...</p>
+                </div>
+              )}
               {feedbackHtml && (
-                <div className="prose text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: feedbackHtml }} />
+                <div className="prose prose-sm text-gray-800 leading-relaxed" dangerouslySetInnerHTML={{ __html: feedbackHtml }} />
               )}
               {!feedbackHtml && feedback && !feedbackError && (
-                <div className="text-sm text-gray-800"><em>{feedback}</em></div>
+                <div className="text-sm text-gray-800 italic">{feedback}</div>
               )}
             </div>
           </div>
         </aside>
       </>
     )}
+
+    {/* Persistent feedback tab on left side */}
+    {feedback && !showFeedback && (
+      <div className="fixed left-0 top-1/2 transform -translate-y-1/2 z-30">
+        <button
+          onClick={() => setShowFeedback(true)}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-4 rounded-r-lg shadow-lg transition-all duration-200 flex items-center gap-2 group min-w-[60px]"
+          title="View SMART Feedback"
+        >
+          <div className="flex flex-col items-center">
+            <span className="text-xs font-medium transform -rotate-90 whitespace-nowrap leading-tight">SMART</span>
+            <span className="text-xs font-medium transform -rotate-90 whitespace-nowrap leading-tight">Feedback</span>
+          </div>
+          <div className="w-2 h-2 bg-white rounded-full opacity-70 group-hover:opacity-100 transition-opacity"></div>
+        </button>
+      </div>
+    )}
+
     <Toast message={toastMessage} visible={showToast} onClose={() => setShowToast(false)} />
     </React.Fragment>
   );

@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { GoalService, ReflectionService, PhaseService, TopicService } from '../../services/dataServices';
+// import { GoalService, ReflectionService, PhaseService, TopicService } from '../../services/dataServices';
 import { Phase, Topic } from '../../types';
 import { TrendingUp, BookOpen, Target, Award, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+// Utility for today
+const today = new Date();
 
 interface TopicProgress {
   topic: Topic;
@@ -49,13 +52,13 @@ const calculatePhaseDurations = (phaseProgress: PhaseProgress[], campusJoiningDa
     .sort((a, b) => a.phase.order - b.phase.order);
 
   filteredPhases.forEach((phaseData, index) => {
-    let startDate: Date;
-    let endDate: Date;
-    let status: 'completed' | 'current' | 'not_started';
+  let startDate: Date;
+  let endDate: Date;
+  let status: 'completed' | 'current' | 'not_started';
 
     // For Phase 1, use campus joining date as start
     if (index === 0) {
-      startDate = campusJoiningDate || new Date(phaseData.phase.start_date);
+  startDate = campusJoiningDate || today;
     } else {
       // For subsequent phases, use the completion date of the previous phase's last topic
       const prevPhase = filteredPhases[index - 1];
@@ -63,7 +66,7 @@ const calculatePhaseDurations = (phaseProgress: PhaseProgress[], campusJoiningDa
         .filter(t => t.completed && t.completionDate)
         .sort((a, b) => (b.completionDate?.getTime() || 0) - (a.completionDate?.getTime() || 0))[0];
 
-      startDate = prevPhaseLastCompletion?.completionDate || new Date(prevPhase.phase.end_date);
+      startDate = prevPhaseLastCompletion?.completionDate || today;
     }
 
     // Determine end date and status
@@ -73,11 +76,11 @@ const calculatePhaseDurations = (phaseProgress: PhaseProgress[], campusJoiningDa
         .filter(t => t.completed && t.completionDate)
         .sort((a, b) => (b.completionDate?.getTime() || 0) - (a.completionDate?.getTime() || 0))[0];
 
-      endDate = lastCompletion?.completionDate || new Date(phaseData.phase.end_date);
+      endDate = lastCompletion?.completionDate || today;
       status = 'completed';
     } else if (phaseData.completedTopics > 0) {
-      // Phase is current (in progress)
-      endDate = today;
+  // Phase is current (in progress)
+  endDate = today;
       status = 'current';
     } else {
       // Phase not started yet
@@ -158,7 +161,7 @@ const calculateHouseAverages = async (house: string, allPhases: Phase[]): Promis
             }
           }
 
-          startDate = prevPhaseEndDate || new Date(prevPhase.end_date);
+          startDate = prevPhaseEndDate || today;
         }
 
         // Calculate end date (last completion in this phase or current date)
@@ -236,79 +239,71 @@ const StudentJourney: React.FC = () => {
 
     try {
       setLoading(true);
+      console.log('Starting to load journey data...');
 
-      // Get all phases and topics
-      const phases = await PhaseService.getAllPhases();
+      // Skip Firestore entirely, use local data directly
+      console.log('Using local curriculum data...');
+      const { initialPhases, detailedTopics } = await import('../../data/initialData');
+      const phases: Phase[] = initialPhases.map((phase, index) => ({
+        id: `local-${index}`,
+        name: phase.name,
+        order: phase.order,
+        isSenior: phase.isSenior,
+        created_at: new Date()
+      }));
+      console.log('Loaded phases:', phases.length);
+
       setAllPhases(phases);
 
-      // Get all goals for current user
-      const userGoals = await GoalService.getGoalsByStudent(userData.id);
+      // Skip goals entirely for now - use empty array
+      console.log('Skipping goals, using empty array...');
 
-      // Process phase progress
-      const phaseProgressData: PhaseProgress[] = await Promise.all(
-        phases.map(async (phase) => {
-          const topics = await TopicService.getTopicsByPhase(phase.id);
-          
-          const topicProgress: TopicProgress[] = await Promise.all(
-            topics.map(async (topic) => {
-              // Check if this topic is completed by the user
-              const topicGoals = userGoals.filter(goal => goal.topic_id === topic.id);
-              let completed = false;
-              let completionDate: Date | undefined;
+      // Process phase progress using local data only
+      console.log('Processing phase progress...');
+      const phaseProgressData: PhaseProgress[] = phases.map((phase) => {
+        const phaseTopics = detailedTopics[phase.name] || [];
+        const topics: Topic[] = phaseTopics.map((topic, index) => ({
+          id: `local-topic-${phase.id}-${index}`,
+          name: topic.name,
+          order: topic.order,
+          deliverable: topic.deliverable,
+          description: topic.description || '',
+          phase_id: phase.id,
+          created_at: new Date()
+        }));
 
-              for (const goal of topicGoals) {
-                try {
-                  const reflection = await ReflectionService.getReflectionByGoal(goal.id);
-                  if (reflection && reflection.achieved_percentage === 100) {
-                    completed = true;
-                    completionDate = new Date(reflection.created_at);
-                    break; // Found completion, no need to check other goals for this topic
-                  }
-                } catch (error) {
-                  // Continue checking other goals
-                }
-              }
+        // Create topic progress with all incomplete for now
+        const topicProgress: TopicProgress[] = topics.map((topic) => ({
+          topic,
+          completed: false, // All topics marked as incomplete for now
+          completionDate: undefined,
+          phaseName: phase.name
+        }));
 
-              return {
-                topic,
-                completed,
-                completionDate,
-                phaseName: phase.name
-              };
-            })
-          );
+        const completedTopics = 0; // No completed topics for now
+        const totalTopics = topicProgress.length;
+        const progressPercentage = 0; // 0% progress for now
 
-          const completedTopics = topicProgress.filter(tp => tp.completed).length;
-          const totalTopics = topicProgress.length;
-          const progressPercentage = totalTopics > 0 ? (completedTopics / totalTopics) * 100 : 0;
+        return {
+          phase,
+          topics: topicProgress,
+          completedTopics,
+          totalTopics,
+          progressPercentage
+        };
+      });
 
-          return {
-            phase,
-            topics: topicProgress,
-            completedTopics,
-            totalTopics,
-            progressPercentage
-          };
-        })
-      );
-
+      console.log('Processed phase progress:', phaseProgressData.length);
       setPhaseProgress(phaseProgressData);
 
       // Calculate phase duration data for the chart
       const durationData: PhaseDurationData[] = calculatePhaseDurations(phaseProgressData, userData?.campus_joining_date);
 
-      // Calculate house averages if user has a house
-      if (userData?.house) {
-        const houseAverages = await calculateHouseAverages(userData.house, phases);
+      // Set chart data without house averages
+      const combinedData = combineChartData(durationData, []);
+      setCombinedChartData(combinedData);
 
-        // Combine student data with house averages for the single chart
-        const combinedData = combineChartData(durationData, houseAverages);
-        setCombinedChartData(combinedData);
-      } else {
-        // If no house data, just use student data with zero house averages
-        const combinedData = combineChartData(durationData, []);
-        setCombinedChartData(combinedData);
-      }
+      console.log('Journey data loaded successfully');
 
     } catch (error) {
       console.error('Error loading journey data:', error);

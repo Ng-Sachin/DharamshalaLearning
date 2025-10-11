@@ -1,4 +1,4 @@
-import { Phase, Topic } from '../types';
+import { Topic } from '../types';
 
 // Extended topic information including project details
 export interface TopicDetails {
@@ -13,48 +13,30 @@ export interface TopicDetails {
 }
 
 // Initial phases for the campus learning program
-export const initialPhases: Omit<Phase, 'id' | 'created_at'>[] = [
+export const initialPhases: Array<{ name: string; order: number; isSenior?: boolean }> = [
   {
     name: 'Super mentor Phase',
-    start_date: new Date('2025-01-01'),
-    end_date: new Date('2025-12-31'),
     order: -1,
     isSenior: true
   },
   {
-    name: 'Induction: Life Skills and Culture',
-    start_date: new Date('2024-08-01'),
-    end_date: new Date('2024-08-31'),
-    order: 0
-  },
-  {
-    name: 'Induction Learning',
-    start_date: new Date('2024-09-01'),
-    end_date: new Date('2024-09-15'),
+    name: 'Induction: Life Skills & Learning',
     order: 0
   },
   {
     name: 'Phase 0: Foundation',
-    start_date: new Date('2024-09-16'),
-    end_date: new Date('2024-10-26'),
     order: 1
   },
   {
     name: 'Phase 1: Student Profile & Course Portal (HTML Only)',
-    start_date: new Date('2024-10-27'),
-    end_date: new Date('2024-11-30'),
     order: 2
   },
   {
     name: 'Phase 2: Styling & Responsive Design',
-    start_date: new Date('2024-12-01'),
-    end_date: new Date('2024-12-31'),
     order: 3
   },
   {
     name: 'Self Learning Space',
-    start_date: new Date('2024-01-01'),
-    end_date: new Date('2025-12-31'),
     order: -1
   }
 ];
@@ -103,96 +85,432 @@ export const detailedTopics: { [phaseName: string]: TopicDetails[] } = {
       description: 'Intensive React bootcamp for advanced students.'
     }
   ],
-  'Induction: Life Skills and Culture': [
+  'Induction: Life Skills & Learning': [
+    // Life Skills Quests (LS0-LS8 + Bonus) - Following original curriculum design
     {
-      name: 'NavGurukul Community & Values',
+      name: 'LS0: Pre-Check – Tools Setup',
       order: 1,
-      maxTime: 180,
-      keyTags: ['Community', 'Values', 'Culture', 'Belonging', 'Contribution'],
-      deliverable: 'Complete community orientation activities and reflection journal',
-      icon: '🤝',
-      technologies: ['Community Engagement', 'Reflection'],
-      description: `Here you will learn what it truly means to be a part of the NavGurukul community.
-Through different quests, you'll explore how our campuses function, what values guide us, and how you can contribute meaningfully to your learning journey and to others around you.
+      maxTime: 120,
+      keyTags: ['Digital Tools', 'Setup', 'Prerequisites', 'Technology'],
+      deliverable: 'Confirm installation & explore tool usage',
+      icon: '🛠️',
+      technologies: ['Haal-Chaal', 'Google Translate', 'AudioPen', 'ChatGPT', 'Gemini AI', 'Google Docs'],
+      description: `**Quest 0: Pre-Check – Tools Setup**
 
-**Learning Objectives:**
-• Understand NavGurukul's mission and values
-• Learn about campus systems (councils, houses, recognition)
-• Explore your role in the community
-• Practice contributing to group activities`
+**Purpose:** Ensure students have basic digital tools for learning & exploration.
+
+**Key Activities:**
+• Install Haal-Chaal app for campus communication
+• Set up Google Translate for language support
+• Install AudioPen for voice-to-text notes
+• Set up ChatGPT account and explore basic usage
+• Install Gemini AI and test voice features
+• Set up Google Docs for collaborative writing
+
+**Deliverable:** Confirm installation & explore tool usage for all 6 tools
+
+**Learning Focus:**
+Prepare students with essential digital tools that will support their entire learning journey at NavGurukul.`
     },
     {
-      name: 'Communication & Collaboration',
+      name: 'LS1: Ye NavGurukul Kya Hai? (Intro to NG)',
       order: 2,
-      maxTime: 240,
-      keyTags: ['Communication', 'Collaboration', 'Teamwork', 'Active Listening', 'Feedback'],
-      deliverable: 'Complete group activities and peer feedback exercises',
-      icon: '💬',
-      technologies: ['Group Work', 'Presentation Skills'],
-      description: `Learn to communicate confidently and work effectively with your peers.
-Practice active listening, giving and receiving feedback, and collaborating on projects.
+      maxTime: 180,
+      keyTags: ['NavGurukul', 'Mission', 'Values', 'Learning Philosophy', 'Community'],
+      deliverable: '5-min video explaining "What is NavGurukul" + short reflection doc',
+      icon: '🏫',
+      technologies: ['Video Creation', 'Research', 'Reflection'],
+      description: `**Quest 1: Ye NavGurukul Kya Hai? (Intro to NG)**
 
-**Learning Objectives:**
-• Develop confident communication skills
-• Learn effective collaboration techniques
-• Practice active listening and feedback
-• Build healthy peer relationships`
+**Purpose:** Understand NavGurukul's mission, values, and learning philosophy.
+
+**Key Activities:**
+• Explore NavGurukul website thoroughly
+• Watch alumni success stories and testimonials
+• Reflect on NavGurukul's impact on students' lives
+• Understand the unique learning approach
+• Connect with the mission and vision
+
+**Deliverable:** Create a 5-minute video explaining "What is NavGurukul" + write a short reflection document
+
+**Learning Focus:**
+Deep understanding of NavGurukul's educational philosophy and how it differs from traditional education systems.`
     },
     {
-      name: 'Personal Development & Routines',
+      name: 'LS2: English Speaking Culture – B2 in 2 Months',
       order: 3,
-      maxTime: 180,
-      keyTags: ['Personal Growth', 'Habits', 'Routine', 'Self-Reflection', 'Goal Setting'],
-      deliverable: 'Create personal development plan and establish daily routines',
-      icon: '🌱',
-      technologies: ['Self-Reflection', 'Goal Setting'],
-      description: `Build healthy routines and understand personal development.
-Learn to reflect on your emotions, set personal goals, and maintain productive habits.
+      maxTime: 1440, // 24 hours total for all sub-quests
+      keyTags: ['English Speaking', 'Culture', 'Communication', 'LSRW', 'Daily Practice'],
+      deliverable: 'Multiple sub-quests (2.1–2.7) — uploads, videos, reflections',
+      icon: '🗣️',
+      technologies: ['Human Library', 'Karaoke', 'AI Tools', 'Voice Recording'],
+      description: `**Quest 2: English Speaking Culture – B2 in 2 Months**
 
-**Learning Objectives:**
-• Build healthy daily routines
-• Practice emotional self-awareness
-• Set personal development goals
-• Develop self-reflection habits`
+**Purpose:** Build daily English-speaking habits & campus culture.
+
+**Key Activities:**
+• Human Library sessions for conversational practice
+• Karaoke sessions for confidence building
+• Drama skits and flash mobs for expression
+• AI correction tools for improvement
+• Focus on LSRW (Listening, Speaking, Reading, Writing)
+
+**Sub-Quests Overview:**
+This quest contains 7 sub-activities (2.1-2.7) designed to create an immersive English learning environment.
+
+**Learning Focus:**
+Transform English from a subject to a living, breathing part of daily campus culture.`
     },
     {
-      name: 'Digital Tools & Creative Expression',
+      name: 'LS2.1: Story Reading & Retelling',
       order: 4,
-      maxTime: 240,
-      keyTags: ['Digital Literacy', 'AI Tools', 'Creative Expression', 'Technology', 'Documentation'],
-      deliverable: 'Create digital portfolio and demonstrate tool usage',
-      icon: '💻',
-      technologies: ['ChatGPT', 'Gemini', 'Google Docs', 'PartyRock', 'Digital Tools'],
-      description: `Start using modern digital tools to express your ideas creatively.
-Learn to use ChatGPT, Gemini, Google Docs, and PartyRock for various tasks.
+      maxTime: 180,
+      keyTags: ['Reading Comprehension', 'Narration', 'Storytelling', 'English Practice'],
+      deliverable: 'Write doc on story, favorite character, alternate ending',
+      icon: '📚',
+      technologies: ['Reading', 'Writing', 'Storytelling'],
+      description: `**Quest 2.1: Story Reading & Retelling**
 
-**Learning Objectives:**
-• Learn digital tool basics
-• Practice creative expression with AI
-• Use documentation tools effectively
-• Create digital content and portfolios`
+**Purpose:** Develop comprehension and narration skills.
+
+**Key Activities:**
+• Read a short story from campus library
+• Narrate the story in English to peers
+• Share personal reflections and insights
+• Discuss themes and characters
+
+**Deliverable:** Write a document covering the story summary, favorite character analysis, and create an alternate ending
+
+**Learning Focus:**
+Building reading comprehension while developing confident English narration abilities.`
     },
     {
-      name: 'Leadership & Community Shaping',
+      name: 'LS2.2: English Only Day',
       order: 5,
-      maxTime: 180,
-      keyTags: ['Leadership', 'Community Building', 'Initiative', 'Responsibility', 'Impact'],
-      deliverable: 'Lead a community activity and reflect on leadership experience',
-      icon: '👑',
-      technologies: ['Leadership Activities', 'Community Projects'],
-      description: `By the end of this phase, you'll not only understand how things work at NavGurukul, but also how you can shape them — becoming an active, thoughtful, and confident member of our community.
+      maxTime: 480, // Full day activity
+      keyTags: ['Immersive Practice', 'English Only', 'Communication Challenge'],
+      deliverable: 'Share fun moments from English-only day with LSA',
+      icon: '🌅',
+      technologies: ['Voice Translate', 'Conversation Practice'],
+      description: `**Quest 2.2: English Only Day**
 
-**Learning Objectives:**
-• Understand leadership roles and responsibilities
-• Learn to initiate and lead activities
-• Contribute to community improvement
-• Develop confidence in community participation`
-    }
-  ],
-  'Induction Learning': [
+**Purpose:** Encourage immersive English practice.
+
+**Key Activities:**
+• Commit to speaking only English for an entire day
+• Use voice translate when stuck on words
+• Document funny and challenging moments
+• Help peers maintain English-only communication
+
+**Deliverable:** Share fun moments and learnings from English-only day with LSA (Life Skills Assistant)
+
+**Learning Focus:**
+Experience immersive language learning and build confidence through real-world English usage.`
+    },
     {
-      name: 'Quest 1: Learning How to Learn',
-      order: 1,
+      name: 'LS2.3: Self-Introduction Video',
+      order: 6,
+      maxTime: 120,
+      keyTags: ['Self Expression', 'Video Creation', 'Confidence Building', 'Personal Branding'],
+      deliverable: 'Upload video and share feedback from LSA',
+      icon: '🎬',
+      technologies: ['Video Recording', 'Self Presentation'],
+      description: `**Quest 2.3: Self-Introduction Video**
+
+**Purpose:** Build confidence in self-expression.
+
+**Key Activities:**
+• Watch introduction videos for inspiration
+• Prepare personal introduction script
+• Record engaging self-introduction video
+• Practice speaking clearly and confidently
+
+**Deliverable:** Upload introduction video and share feedback received from LSA
+
+**Learning Focus:**
+Develop confident self-expression and video communication skills.`
+    },
+    {
+      name: 'LS2.4: Friends Series Roleplay',
+      order: 7,
+      maxTime: 240,
+      keyTags: ['Roleplay', 'Tone Practice', 'Emotional Expression', 'Entertainment Learning'],
+      deliverable: 'Upload video + write reflections on favorite episode/character',
+      icon: '🎭',
+      technologies: ['Video Recording', 'Acting', 'Script Analysis'],
+      description: `**Quest 2.4: Friends Series Roleplay**
+
+**Purpose:** Practice tone, emotion & conversational English.
+
+**Key Activities:**
+• Watch a season of Friends TV series
+• Choose a 15-minute scene to recreate
+• Practice emotional expressions and timing
+• Act out the scene and record it
+
+**Deliverable:** Upload roleplay video + write reflections on favorite episode and character
+
+**Learning Focus:**
+Learn natural English conversation patterns, emotional expression, and cultural context through entertainment.`
+    },
+    {
+      name: 'LS2.5: Harry Potter Dubbing Challenge',
+      order: 8,
+      maxTime: 180,
+      keyTags: ['Dubbing', 'Pronunciation', 'Voice Acting', 'Timing'],
+      deliverable: 'Upload dubbed video + short presentation on process',
+      icon: '⚡',
+      technologies: ['Voice Recording', 'Video Editing', 'Dubbing'],
+      description: `**Quest 2.5: Harry Potter Dubbing Challenge**
+
+**Purpose:** Improve pronunciation & emotional fluency.
+
+**Key Activities:**
+• Select a 3-5 minute scene from Harry Potter
+• Practice matching voice timing and emotion
+• Focus on clear pronunciation and expression
+• Record dubbed version with proper timing
+
+**Deliverable:** Upload dubbed video + create short presentation explaining the dubbing process
+
+**Learning Focus:**
+Master pronunciation, timing, and emotional expression through creative voice work.`
+    },
+    {
+      name: 'LS2.6: 10-Day AI English Practice',
+      order: 9,
+      maxTime: 600, // 10 days × 60 minutes
+      keyTags: ['AI Practice', 'Daily Habit', 'Conversation', 'Feedback Loop'],
+      deliverable: 'Upload AI feedback + share chat with LSA',
+      icon: '🤖',
+      technologies: ['ChatGPT', 'Gemini', 'AI Conversation'],
+      description: `**Quest 2.6: 10-Day AI English Practice**
+
+**Purpose:** Build daily English habit using AI chat tools.
+
+**Key Activities:**
+• Chat with AI for 10 minutes daily for 10 consecutive days
+• Discuss different topics each day
+• Ask AI for feedback on language improvement
+• Track progress and areas of improvement
+
+**Deliverable:** Upload AI feedback from Day 10 + share interesting chat conversations with LSA
+
+**Learning Focus:**
+Establish consistent English practice routine with AI assistance and personalized feedback.`
+    },
+    {
+      name: 'LS2.7: Read an English Book',
+      order: 10,
+      maxTime: 360,
+      keyTags: ['Reading Comprehension', 'Book Analysis', 'Peer Teaching'],
+      deliverable: 'Upload short written summary & reflection',
+      icon: '📖',
+      technologies: ['Reading', 'Analysis', 'Peer Discussion'],
+      description: `**Quest 2.7: Read an English Book**
+
+**Purpose:** Strengthen reading comprehension & expression.
+
+**Key Activities:**
+• Pick an interesting book from campus library
+• Finish reading the book in 3-5 days
+• Understand the story, themes, and characters
+• Explain the story to a peer in English
+
+**Deliverable:** Upload short written summary and personal reflection on the book
+
+**Learning Focus:**
+Develop sustained reading habits and ability to comprehend and communicate complex narratives.`
+    },
+    {
+      name: 'LS3: Morning Exercise – Break the Loop!',
+      order: 11,
+      maxTime: 240,
+      keyTags: ['Physical Fitness', 'Energy Building', 'Consistency', 'Health'],
+      deliverable: 'Article on "My experience of morning exercise" (with ChatGPT)',
+      icon: '🏃‍♂️',
+      technologies: ['Physical Training', 'ChatGPT', 'Health Tracking'],
+      description: `**Quest 3: Morning Exercise – Break the Loop!**
+
+**Purpose:** Build energy & consistency through fitness.
+
+**Key Activities:**
+• Explore self-defence techniques and training
+• Interview peers about their exercise experiences
+• Watch fitness and health-related videos
+• Join morning exercise sessions regularly
+
+**Deliverable:** Write an article on "My experience of morning exercise" using ChatGPT assistance
+
+**Learning Focus:**
+Establish healthy physical habits that boost energy and create positive daily momentum.`
+    },
+    {
+      name: 'LS4: Reward System – Mehnat Ka Medal',
+      order: 12,
+      maxTime: 180,
+      keyTags: ['Recognition', 'Input Tracking', 'Effort Appreciation', 'Motivation'],
+      deliverable: '1-min reflection video + points tracking sheet',
+      icon: '🏅',
+      technologies: ['Point Tracking', 'Video Reflection'],
+      description: `**Quest 4: Reward System – Mehnat Ka Medal**
+
+**Purpose:** Understand recognition through inputs & efforts.
+
+**Key Activities:**
+• Read and understand the Reward System documentation
+• Observe how peers earn recognition and points
+• Track your own input activities and efforts
+• Reflect on the importance of consistent effort
+
+**Deliverable:** Create 1-minute reflection video + maintain detailed points tracking sheet
+
+**Learning Focus:**
+Learn that success comes from consistent input and effort, not just output and results.`
+    },
+    {
+      name: 'LS5: Apna Ghar, Apni Pehchaan (House System)',
+      order: 13,
+      maxTime: 180,
+      keyTags: ['House System', 'Belonging', 'Team Spirit', 'Identity'],
+      deliverable: 'Upload reflection doc + English chant video',
+      icon: '🏠',
+      technologies: ['Community Building', 'Creative Expression'],
+      description: `**Quest 5: Apna Ghar, Apni Pehchaan (House System)**
+
+**Purpose:** Learn about the House structure & belonging.
+
+**Key Activities:**
+• Talk to 3 different house members about their experiences
+• Choose your house based on values and connection
+• Create an original house chant or song
+• Read house documentation and understand traditions
+
+**Deliverable:** Upload reflection document + create English chant video for your house
+
+**Learning Focus:**
+Develop sense of belonging and team identity within the larger NavGurukul community.`
+    },
+    {
+      name: 'LS6: GBU – Good, Bad, Ugly Reflection',
+      order: 14,
+      maxTime: 240,
+      keyTags: ['Self Reflection', 'Honest Assessment', 'Growth Mindset', 'Learning'],
+      deliverable: 'GBU table + overall video reflection',
+      icon: '🪞',
+      technologies: ['Reflection Tools', 'Video Creation'],
+      description: `**Quest 6: GBU – Good, Bad, Ugly Reflection**
+
+**Purpose:** Build self-awareness through honest reflection.
+
+**Key Activities:**
+• Reflect on each completed activity (Intro, English, Rewards, Exercise, House, etc.)
+• Identify Good aspects (what worked well)
+• Acknowledge Bad aspects (what could be improved)
+• Face Ugly aspects (honest self-criticism and areas for growth)
+
+**Deliverable:** Create comprehensive GBU table + record overall video reflection
+
+**Learning Focus:**
+Develop honest self-assessment skills and growth mindset through structured reflection.`
+    },
+    {
+      name: 'LS7: Council Hunt – Etiocracy',
+      order: 15,
+      maxTime: 180,
+      keyTags: ['Student Governance', 'Etiocracy', 'Decision Making', 'Leadership'],
+      deliverable: 'Google Doc summary + reflection "What I understood about Etiocracy"',
+      icon: '🏛️',
+      technologies: ['Interview Skills', 'AI Writing', 'Research'],
+      description: `**Quest 7: Council Hunt – Etiocracy**
+
+**Purpose:** Understand student governance & decision-making.
+
+**Key Activities:**
+• Interview 2 or more council members about their roles
+• Record Q&A sessions about student governance
+• Write comprehensive summary using AI assistance
+• Understand the concept and practice of Etiocracy
+
+**Deliverable:** Create Google Doc summary + reflection "What I understood about Etiocracy"
+
+**Learning Focus:**
+Learn about democratic decision-making, student leadership, and collaborative governance systems.`
+    },
+    {
+      name: 'LS8: Mini AI Challenge – Create App with PartyRock',
+      order: 16,
+      maxTime: 240,
+      keyTags: ['AI Tools', 'App Creation', 'Creative Problem Solving', 'Technology'],
+      deliverable: 'Published app link + presentation/demo shared with LSA',
+      icon: '🎉',
+      technologies: ['PartyRock', 'App Development', 'AI Tools'],
+      description: `**Quest 8: Mini AI Challenge – Create App with PartyRock**
+
+**Purpose:** Introduce creative use of AI for problem-solving.
+
+**Key Activities:**
+• Explore PartyRock platform and its capabilities
+• Brainstorm app ideas (quotes, jokes, games, utilities)
+• Create and publish a simple but functional app
+• Test and refine the app based on feedback
+
+**Deliverable:** Share published app link + create presentation/demo to share with LSA
+
+**Learning Focus:**
+Experience the power of AI-assisted creativity and learn to build functional applications.`
+    },
+    {
+      name: 'LSB1: Vipassana – Inner Reflection & Calmness (Bonus)',
+      order: 17,
+      maxTime: 300,
+      keyTags: ['Vipassana', 'Mindfulness', 'Inner Peace', 'Meditation', 'Bonus Quest'],
+      deliverable: 'Reflection note / verbal sharing session',
+      icon: '🧘',
+      technologies: ['Meditation', 'Mindfulness Practice'],
+      description: `**Bonus Quest: Vipassana – Inner Reflection & Calmness**
+
+**Purpose:** Experience mindfulness and emotional balance.
+
+**Key Activities:**
+• Attend structured Vipassana meditation session
+• Practice silence and inner observation
+• Reflect on the experience of stillness
+• Learn mindfulness techniques for daily life
+
+**Deliverable:** Write reflection note or participate in verbal sharing session about the experience
+
+**Learning Focus:**
+Develop inner calm, emotional balance, and mindfulness practices for mental well-being.`
+    },
+    {
+      name: 'LSB2: Payforward – Giving Back to Community (Bonus)',
+      order: 18,
+      maxTime: 360,
+      keyTags: ['Community Service', 'Giving Back', 'Gratitude', 'Social Impact', 'Bonus Quest'],
+      deliverable: 'Short write-up/video on your Payforward experience',
+      icon: '🎁',
+      technologies: ['Community Engagement', 'Social Impact'],
+      description: `**Bonus Quest: Payforward – Giving Back to Community**
+
+**Purpose:** Encourage contribution and gratitude.
+
+**Key Activities:**
+• Support peers or juniors using skills you've learned
+• Share knowledge and experiences generously
+• Help others navigate challenges you've overcome
+• Create positive impact in the community
+
+**Deliverable:** Create short write-up or video documenting your Payforward experience
+
+**Learning Focus:**
+Develop gratitude, generosity, and understanding of how giving back strengthens the entire community.`
+    },
+
+    // Learning Quests (LE1-LE8)
+    {
+      name: 'LE1: Learning How to Learn',
+      order: 18,
       maxTime: 360,
       keyTags: ['Learning Methodology', 'Metacognition', 'Practice', 'Reflection', 'Experiential Learning'],
       deliverable: 'Complete origami activity, laptop exploration, and self-learning challenges',
@@ -212,146 +530,134 @@ Learn to use ChatGPT, Gemini, Google Docs, and PartyRock for various tasks.
 
 **Step 3: Self-Learning Challenge**
 • Learning like a child – discover through exploration
-• Office tools tasks using Google, YouTube, ChatGPT
-• Practice self-learning and problem-solving independently
+• Use Khan Academy or similar platform
+• Pick any topic you're curious about and learn for 2 hours
+• Reflect: What made it interesting? What was difficult?
 
-**Learning Outcome:** Understand "learning by doing" and metacognition. Learn how practice, observation, and reflection help you learn anything.`
+**Learning Objectives:**
+• Understand different learning styles and methods
+• Experience visual, hands-on, and self-directed learning
+• Develop confidence in exploration and discovery
+• Build metacognitive awareness of your learning process`
     },
     {
-      name: 'Learning How the Brain Works',
-      order: 2,
-      maxTime: 120,
-      keyTags: ['Neuroplasticity', 'Brain Science', 'Learning Psychology', 'Practice Makes Permanent'],
-      deliverable: 'Watch and discuss neuroplasticity videos, reflect on learning process',
-      icon: '🧬',
-      technologies: ['Video Learning', 'Discussion', 'Reflection'],
-      description: `**Learning How the Brain Works**
-
-**Story:** Aarti's English speech story – practice makes permanent
-
-**Activity:** Watch 2 short videos on neuroplasticity
-• YouTube: "How Your Brain Works" (5d71xhEbjDg)
-• YouTube: "Neuroplasticity Explained" (F31nAJR-IiI)
-
-**Learning Outcome:** Understand how mistakes, visuals, and practice shape learning. Discover how the brain adapts and grows through experience.`
-    },
-    {
-      name: 'Quest 2: AI as a Friend',
-      order: 3,
+      name: 'LE2: Research & Information Literacy',
+      order: 19,
       maxTime: 300,
-      keyTags: ['AI Tools', 'Technology', 'Creative Expression', 'Digital Literacy'],
-      deliverable: 'Complete 9 AI-powered challenges using various AI tools',
-      icon: '🤖',
-      technologies: ['ChatGPT', 'Perplexity', 'Canva', 'Podcastle', 'PartyRock', 'Gemini Voice'],
-      description: `**Quest 2: AI as a Friend**
+      keyTags: ['Research Skills', 'Information Literacy', 'Critical Evaluation', 'Source Analysis'],
+      deliverable: 'Complete research project with credible sources and analysis',
+      icon: '🔍',
+      technologies: ['Google Scholar', 'Research Databases', 'Fact-Checking Tools'],
+      description: `Learn essential research skills and how to evaluate information credibility in the digital age.
 
-**Challenge:** AI tools help you learn faster and more creatively
-
-**Activities:**
-• Complete 9 AI-powered challenges
-• Use ChatGPT, Perplexity, Canva, Podcastle, PartyRock, Gemini Voice
-• Explore different AI applications for learning and creation
-
-**Learning Outcome:** Learn to use AI tools effectively for tasks and self-expression. Discover how AI can enhance your learning journey.`
+**Learning Objectives:**
+• Master effective search strategies
+• Learn to evaluate source credibility
+• Practice information synthesis
+• Develop critical thinking about information
+• Build academic research foundations`
     },
     {
-      name: 'Quest 3: Hackathon – Build Your Portfolio',
-      order: 4,
-      maxTime: 480,
-      keyTags: ['Coding', 'Creativity', 'Teamwork', 'Portfolio Development', 'Project Building'],
-      deliverable: 'Create app, website, or tool within time limit and present to group',
-      icon: '💻',
-      technologies: ['Coding', 'Project Development', 'Team Collaboration'],
-      description: `**Quest 3: Hackathon – Build Your Portfolio**
-
-**Challenge:** Coding marathon – creativity + teamwork
-
-**Activity:** Create app, website, or tool within time constraints
-• Work individually or in teams
-• Focus on creativity and problem-solving
-• Build something meaningful to showcase
-
-**Learning Outcome:** Hands-on coding experience + portfolio creation. Develop teamwork skills and project management abilities.`
-    },
-    {
-      name: 'Quest 4: Hackathon Reflection',
-      order: 5,
-      maxTime: 180,
-      keyTags: ['Reflection', 'Peer Learning', 'Communication', 'Code Review', 'Problem Solving'],
-      deliverable: 'Explain your code to a partner and document learnings using reflection chart',
-      icon: '📝',
-      technologies: ['Peer Teaching', 'Reflection', 'Documentation'],
-      description: `**Quest 4: Hackathon Reflection**
-
-**Challenge:** Reflection strengthens learning
-
-**Activity:** 
-• Explain your code to a partner and understand theirs
-• Use reflection chart template to document insights
-• Discuss challenges faced and solutions found
-
-**Learning Outcome:** Learn peer-learning techniques. Improve communication and problem-solving skills through collaborative reflection.`
-    },
-    {
-      name: 'Quest 5: Coding Journey – 5 Challenges',
-      order: 6,
-      maxTime: 300,
-      keyTags: ['Coding', 'Problem Solving', 'Persistence', 'Incremental Learning', 'Programming Mindset'],
-      deliverable: 'Complete 5 coding challenges using MakeCode or Code.org platforms',
-      icon: '🎯',
-      technologies: ['MakeCode', 'Code.org', 'Block Coding', 'Visual Programming'],
-      description: `**Quest 5: Coding Journey – 5 Challenges**
-
-**Challenge:** Coding is a learning journey
-
-**Activity:** Complete 5 coding challenges
-• Use MakeCode or Code.org platforms
-• Focus on fundamental programming concepts
-• Build persistence and problem-solving skills
-
-**Learning Outcome:** Develop coding mindset, persistence, and incremental learning. Experience the journey of becoming a programmer.`
-    },
-    {
-      name: 'Quest 6: Ek Din Ka Sach – Daily Growth',
-      order: 7,
+      name: 'LE3: Critical Thinking & Problem Solving',
+      order: 20,
       maxTime: 240,
-      keyTags: ['Daily Routine', 'Self-Discipline', 'Language Learning', 'Personal Growth', 'Planning'],
-      deliverable: 'Maintain daily routine: exercise, planning, coding practice, and English speaking',
-      icon: '📅',
-      technologies: ['Exercise', 'Time Management', 'Language Practice', 'Goal Setting'],
-      description: `**Quest 6: Ek Din Ka Sach – Daily Growth**
+      keyTags: ['Critical Thinking', 'Problem Solving', 'Logic', 'Analysis', 'Decision Making'],
+      deliverable: 'Solve complex problems using structured thinking frameworks',
+      icon: '🧩',
+      technologies: ['Problem Solving Frameworks', 'Logic Tools'],
+      description: `Develop critical thinking skills and systematic approaches to problem-solving.
 
-**Challenge:** Learn from your day, plan smartly
-
-**Daily Activities:**
-• Morning exercise routine
-• Smart day planning and time management
-• Regular coding practice
-• English speaking practice
-
-**Learning Outcome:** Build daily routine, self-discipline, reflection habit, and language skills. Develop sustainable learning practices.`
+**Learning Objectives:**
+• Learn structured problem-solving methods
+• Practice logical reasoning and analysis
+• Develop decision-making frameworks
+• Build critical evaluation skills
+• Master systematic thinking approaches`
     },
     {
-      name: 'Reflection Time: Din Khatam',
-      order: 8,
-      maxTime: 120,
-      keyTags: ['Metacognition', 'Mindfulness', 'Self-Reflection', 'Learning from Experience', 'Meditation'],
-      deliverable: 'Complete end-of-day reflection questions and meditation practice',
-      icon: '🧘',
-      technologies: ['Reflection', 'Meditation', 'Mindfulness', 'Self-Assessment'],
-      description: `**Reflection Time: Din Khatam**
+      name: 'LE4: Digital Literacy & Basic Computing',
+      order: 21,
+      maxTime: 300,
+      keyTags: ['Digital Literacy', 'Computing Basics', 'File Management', 'Internet Safety'],
+      deliverable: 'Demonstrate proficiency in digital tools and computing basics',
+      icon: '💾',
+      technologies: ['Operating Systems', 'File Management', 'Internet Browsers', 'Security Tools'],
+      description: `Build foundational digital literacy skills and understanding of basic computing concepts.
 
-**Challenge:** End-of-day reflection for continuous growth
+**Learning Objectives:**
+• Master file management and organization
+• Understand operating system basics
+• Learn internet safety and security
+• Develop keyboard and navigation skills
+• Build confidence with digital tools`
+    },
+    {
+      name: 'LE5: Introduction to Programming Concepts',
+      order: 22,
+      maxTime: 360,
+      keyTags: ['Programming Basics', 'Logic', 'Algorithms', 'Computational Thinking'],
+      deliverable: 'Create simple programs demonstrating basic programming concepts',
+      icon: '👨‍💻',
+      technologies: ['Scratch', 'Block Programming', 'Basic Coding'],
+      description: `Introduction to programming logic and computational thinking through visual and interactive tools.
 
-**Activity:** Answer reflective questions on:
-• What did you learn today?
-• What challenges did you face?
-• What goals did you achieve?
-• How can you improve tomorrow?
+**Learning Objectives:**
+• Understand programming logic and flow
+• Learn algorithmic thinking
+• Practice problem decomposition
+• Build computational problem-solving skills
+• Gain confidence in logical thinking`
+    },
+    {
+      name: 'LE6: Web Technologies Overview',
+      order: 23,
+      maxTime: 300,
+      keyTags: ['Web Technologies', 'HTML', 'CSS', 'Internet Basics', 'Web Development'],
+      deliverable: 'Create simple web page demonstrating understanding of web technologies',
+      icon: '🌐',
+      technologies: ['HTML', 'CSS', 'Web Browsers', 'Developer Tools'],
+      description: `Explore how websites work and get hands-on experience with basic web technologies.
 
-**Bonus:** Vipassana meditation practice for mindfulness
+**Learning Objectives:**
+• Understand how the internet and websites work
+• Learn HTML structure and CSS styling basics
+• Explore web development tools
+• Create your first web page
+• Build foundation for web development`
+    },
+    {
+      name: 'LE7: Creative Technology Projects',
+      order: 24,
+      maxTime: 360,
+      keyTags: ['Creative Technology', 'Digital Art', 'Multimedia', 'Innovation', 'Design'],
+      deliverable: 'Complete creative technology project combining multiple skills',
+      icon: '🎨',
+      technologies: ['Design Tools', 'Multimedia Software', 'Creative Platforms'],
+      description: `Combine technology skills with creativity to build innovative and artistic projects.
 
-**Learning Outcome:** Enhance metacognition, mindfulness, and ability to learn from experiences. Develop reflective thinking habits.`
+**Learning Objectives:**
+• Integrate technical and creative skills
+• Learn design thinking principles
+• Practice innovation and creativity
+• Build multimedia projects
+• Develop artistic expression through technology`
+    },
+    {
+      name: 'LE8: Portfolio Development & Presentation',
+      order: 25,
+      maxTime: 300,
+      keyTags: ['Portfolio', 'Presentation', 'Documentation', 'Reflection', 'Showcase'],
+      deliverable: 'Create comprehensive learning portfolio and present achievements',
+      icon: '📁',
+      technologies: ['Portfolio Platforms', 'Presentation Tools', 'Documentation'],
+      description: `Create a comprehensive portfolio showcasing your learning journey and present your achievements to the community.
+
+**Learning Objectives:**
+• Document and reflect on learning journey
+• Create professional portfolio presentation
+• Practice public presentation skills
+• Showcase projects and achievements
+• Prepare for next phase transition`
     }
   ],
   'Phase 0: Foundation': [

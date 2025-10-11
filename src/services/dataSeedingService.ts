@@ -68,8 +68,6 @@ export class DataSeedingService {
             
             const phaseData = {
               name,
-              start_date: new Date(),
-              end_date: new Date(),
               order: order,
               created_at: new Date()
             };
@@ -137,6 +135,42 @@ export class DataSeedingService {
         topicsCount: 0,
         isSeeded: false
       };
+    }
+  }
+
+  /**
+   * Clean up all existing curriculum data from Firebase
+   */
+  static async cleanupCurriculumData(): Promise<boolean> {
+    try {
+      console.log('🧹 Starting curriculum data cleanup...');
+      
+      // Get all existing phases
+      const existingPhases = await PhaseService.getAllPhases();
+      console.log(`Found ${existingPhases.length} phases to clean up`);
+      
+      // Delete all topics for each phase
+      for (const phase of existingPhases) {
+        console.log(`Cleaning up topics for phase: ${phase.name}`);
+        const topics = await TopicService.getTopicsByPhase(phase.id);
+        
+        for (const topic of topics) {
+          await TopicService.deleteTopic(topic.id);
+        }
+        console.log(`Deleted ${topics.length} topics from ${phase.name}`);
+      }
+      
+      // Delete all phases
+      for (const phase of existingPhases) {
+        console.log(`Deleting phase: ${phase.name}`);
+        await PhaseService.deletePhase(phase.id);
+      }
+      
+      console.log('✅ Curriculum data cleanup completed successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error during curriculum cleanup:', error);
+      throw error;
     }
   }
 }

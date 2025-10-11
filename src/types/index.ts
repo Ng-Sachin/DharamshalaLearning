@@ -29,8 +29,6 @@ export interface User {
 export interface Phase {
   id: string;
   name: string;
-  start_date: Date;
-  end_date: Date;
   order: number;
   isSenior?: boolean; // optional flag to mark mentor/senior phases
   created_at: Date;
@@ -61,6 +59,8 @@ export interface DailyGoal {
   target_percentage: number;
   status: 'pending' | 'reviewed' | 'approved';
   mentor_comment?: string;
+  goal_rating?: number; // AI-generated goal rating (0-100)
+  goal_feedback?: string; // AI-generated SMART feedback
   created_at: Date;
   reviewed_at?: Date;
   reviewed_by?: string;

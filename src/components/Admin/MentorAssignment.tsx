@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AdminService, PhaseService } from '../../services/dataServices';
+import { AdminService, PhaseService, MentorshipService } from '../../services/dataServices';
 import { 
   Users, 
   UserCheck, 
@@ -8,8 +8,12 @@ import {
   AlertCircle,
   CheckCircle,
   Award,
-  TrendingUp
+  TrendingUp,
+  Bell,
+  X,
+  Clock
 } from 'lucide-react';
+import MentorRequestApproval from './MentorRequestApproval';
 
 interface StudentWithMentor {
   id: string;
@@ -42,12 +46,27 @@ const MentorAssignment: React.FC = () => {
   const [mentorSearchTerm, setMentorSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'with_mentor' | 'without_mentor'>('all');
   const [selectedHouse, setSelectedHouse] = useState<string | null>(null);
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   
   const houses = ['Bageshree', 'Malhar', 'Bhairav'];
 
   useEffect(() => {
     loadStudents();
+    loadPendingRequestsCount();
   }, []);
+
+  const loadPendingRequestsCount = async () => {
+    try {
+      // Get actual pending requests count
+      const pendingRequests = await MentorshipService.getPendingMentorRequests();
+      setPendingRequestsCount(pendingRequests.length);
+    } catch (error) {
+      console.error('Error loading pending requests:', error);
+      // If there's an error, set to 0
+      setPendingRequestsCount(0);
+    }
+  };
 
   const loadStudents = async () => {
     try {
@@ -162,7 +181,7 @@ const MentorAssignment: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -192,7 +211,48 @@ const MentorAssignment: React.FC = () => {
             <AlertCircle className="h-8 w-8 text-orange-500" />
           </div>
         </div>
+
+        {/* Mentor Requests Card */}
+        <div 
+          className="bg-white rounded-lg shadow p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => setShowRequestsModal(true)}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Mentor Requests</p>
+              <p className="text-2xl font-bold text-gray-900">{pendingRequestsCount}</p>
+            </div>
+            <div className="relative">
+              <Bell className="h-8 w-8 text-purple-500" />
+              {pendingRequestsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Mentor Requests Modal */}
+      {showRequestsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Mentor Change Requests</h2>
+              <button
+                onClick={() => setShowRequestsModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <MentorRequestApproval />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Students List */}
