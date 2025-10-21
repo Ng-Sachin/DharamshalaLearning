@@ -2,6 +2,7 @@ import { db } from './firebase';
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -311,22 +312,22 @@ export class RollingQueueService {
    */
   static async removeFromQueue(queueEntryId: string): Promise<void> {
     try {
-      const entrySnapshot = await getDocs(
-        query(collection(db, this.COLLECTION), where('id', '==', queueEntryId))
-      );
+      // Fetch by document ID directly
+      const entryRef = doc(db, this.COLLECTION, queueEntryId);
+      const entrySnapshot = await getDoc(entryRef);
 
-      if (entrySnapshot.empty) {
+      if (!entrySnapshot.exists()) {
         throw new Error(`Queue entry not found: ${queueEntryId}`);
       }
 
-      const removedEntry = entrySnapshot.docs[0].data() as any;
+      const removedEntry = entrySnapshot.data() as any;
       const aaId = removedEntry.academic_associate_id;
       const removedPosition = removedEntry.position;
 
       const batch = writeBatch(db);
 
       // 1. Delete the entry
-      batch.delete(doc(db, this.COLLECTION, queueEntryId));
+      batch.delete(entryRef);
 
       // 2. Reorder entries after the removed one
       const entriesAfter = await getDocs(
@@ -363,17 +364,14 @@ export class RollingQueueService {
   static async reorderQueue(queueEntryId: string, newPosition: number): Promise<void> {
     try {
       // Get the entry being moved
-      const entryQ = query(
-        collection(db, this.COLLECTION),
-        where('id', '==', queueEntryId)
-      );
-      const entrySnapshot = await getDocs(entryQ);
+      const entryRef = doc(db, this.COLLECTION, queueEntryId);
+      const entrySnapshot = await getDoc(entryRef);
 
-      if (entrySnapshot.empty) {
+      if (!entrySnapshot.exists()) {
         throw new Error(`Queue entry not found: ${queueEntryId}`);
       }
 
-      const entry = entrySnapshot.docs[0].data() as any;
+      const entry = entrySnapshot.data() as any;
       const aaId = entry.academic_associate_id;
       const oldPosition = entry.position;
 
@@ -417,7 +415,7 @@ export class RollingQueueService {
       }
 
       // Update the moved entry
-      batch.update(entrySnapshot.docs[0].ref, {
+      batch.update(entryRef, {
         position: newPosition,
         updated_at: Timestamp.now(),
       });
@@ -429,6 +427,77 @@ export class RollingQueueService {
       );
     } catch (error) {
       console.error('❌ [RollingQueueService] Error reordering queue:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Requeue a session for an AA. Optionally insert at the top of the waiting list (right after any in_progress entry).
+   * If toTop is false, appends to the end of the queue.
+   */
+  static async requeueSession(
+    sessionId: string,
+    studentId: string,
+    academicAssociateId: string,
+    campus: string,
+    options: { priority?: 'low' | 'medium' | 'high' | 'urgent'; toTop?: boolean } = {}
+  ): Promise<string> {
+    try {
+      const priority = options.priority ?? 'medium';
+      const toTop = options.toTop ?? true;
+
+      if (!toTop) {
+        // Simple append to end of queue
+        return await this.createQueueEntry(sessionId, studentId, academicAssociateId, campus, priority);
+      }
+
+      // Determine insertion point: right after any current in_progress
+      const current = await this.getCurrentEntryForAA(academicAssociateId);
+      const insertPosition = current ? current.position + 1 : 1;
+
+      // Shift entries at or after the insert position down by one to make room
+      const batch = writeBatch(db);
+
+      const entriesQ = query(
+        collection(db, this.COLLECTION),
+        where('academic_associate_id', '==', academicAssociateId),
+        orderBy('position', 'asc')
+      );
+      const snapshot = await getDocs(entriesQ);
+
+      snapshot.forEach(docSnapshot => {
+        const pos = (docSnapshot.data() as any).position;
+        if (pos >= insertPosition) {
+          batch.update(docSnapshot.ref, {
+            position: pos + 1,
+            updated_at: Timestamp.now(),
+          });
+        }
+      });
+
+      // Prepare new entry doc with auto ID
+      const newRef = doc(collection(db, this.COLLECTION));
+      batch.set(newRef, {
+        academic_associate_id: academicAssociateId,
+        student_id: studentId,
+        session_id: sessionId,
+        position: insertPosition,
+        status: 'waiting',
+        campus,
+        priority,
+        added_at: Timestamp.now(),
+        updated_at: Timestamp.now(),
+      });
+
+      await batch.commit();
+
+      console.log(
+        `✅ [RollingQueueService] Requeued session ${sessionId} for AA ${academicAssociateId} at position ${insertPosition}`
+      );
+
+      return newRef.id;
+    } catch (error) {
+      console.error('❌ [RollingQueueService] Error requeuing session:', error);
       throw error;
     }
   }
@@ -529,21 +598,17 @@ export class RollingQueueService {
    */
   static async getQueueEntryById(entryId: string): Promise<RollingQueueEntry | null> {
     try {
-      const entries = await getDocs(
-        query(
-          collection(db, this.COLLECTION),
-          where('id', '==', entryId)
-        )
-      );
+      const entryRef = doc(db, this.COLLECTION, entryId);
+      const entrySnap = await getDoc(entryRef);
 
-      if (entries.empty) {
+      if (!entrySnap.exists()) {
         return null;
       }
 
-      const data = entries.docs[0].data() as any;
+      const data = entrySnap.data() as any;
 
       return {
-        id: entries.docs[0].id,
+        id: entrySnap.id,
         academic_associate_id: data.academic_associate_id,
         student_id: data.student_id,
         session_id: data.session_id,

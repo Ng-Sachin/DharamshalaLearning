@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModal } from '../../hooks/useModal';
 import { GoalService, ReflectionService, PhaseService, TopicService, MenteeReviewService } from '../../services/dataServices';
-import { UserService, FirestoreService, COLLECTIONS } from '../../services/firestore';
+import { UserService } from '../../services/firestore';
 import { User, DailyGoal, DailyReflection, Phase, Topic, MenteeReviewForm } from '../../types';
 import Toast from '../Common/Toast';
 import { 

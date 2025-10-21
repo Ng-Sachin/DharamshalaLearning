@@ -1693,7 +1693,7 @@ export class EnhancedPairProgrammingService extends FirestoreService {
     }
   }
 
-  static async cancelSession(sessionId: string, reason?: string): Promise<void> {
+  static async cancelSession(sessionId: string, reason?: string, skipRequeue: boolean = false): Promise<void> {
     try {
       // Get session to find queue entry if it exists
       const session = await this.getSessionById(sessionId);
@@ -1708,26 +1708,111 @@ export class EnhancedPairProgrammingService extends FirestoreService {
         cancel_reason: reason
       });
 
-      // Remove from queue if session had a queue entry
-      // This hooks the rolling queue to clean up cancelled sessions
-      if (session.mentor_id) {
+      // Auto-requeue cancelled sessions by default (unless skipRequeue is true)
+      // This ensures students don't lose their place when sessions are cancelled
+      if (session.mentor_id && !skipRequeue) {
         try {
-          // Find and remove the queue entry for this session
+          // Find and remove the old queue entry for this session
           const aaQueues = await RollingQueueService.getQueueForAA(session.mentor_id);
           const queueEntry = aaQueues.find((entry: any) => entry.session_id === sessionId);
           
           if (queueEntry) {
             await RollingQueueService.removeFromQueue(queueEntry.id);
-            console.log(`[Queue] Removed cancelled session ${sessionId} from queue`);
+            console.log(`[Queue] Removed cancelled session ${sessionId} from queue for auto-requeue`);
+          }
+
+          // Auto-requeue: Get campus and requeue at top with preserved priority
+          const mentorUser = await UserService.getUserById(session.mentor_id);
+          const campus = mentorUser?.campus || 'default';
+          const priority = session.priority || 'medium';
+
+          await RollingQueueService.requeueSession(
+            sessionId,
+            session.student_id,
+            session.mentor_id,
+            campus,
+            { priority, toTop: true }
+          );
+
+          // Update session back to assigned state for requeue visibility
+          await this.updateSession(sessionId, {
+            status: 'assigned',
+            assigned_at: new Date(),
+            cancel_reason: reason, // Keep reason for audit trail
+            updated_at: new Date(),
+          });
+
+          console.log(`[Queue] Auto-requeued cancelled session ${sessionId} with priority ${priority}`);
+        } catch (queueError) {
+          // Log queue error but don't fail session cancellation
+          console.error('[Queue] Error auto-requeuing cancelled session:', queueError);
+        }
+      } else if (session.mentor_id && skipRequeue) {
+        // Explicit removal without requeue
+        try {
+          const aaQueues = await RollingQueueService.getQueueForAA(session.mentor_id);
+          const queueEntry = aaQueues.find((entry: any) => entry.session_id === sessionId);
+          
+          if (queueEntry) {
+            await RollingQueueService.removeFromQueue(queueEntry.id);
+            console.log(`[Queue] Removed cancelled session ${sessionId} from queue (no requeue)`);
           }
         } catch (queueError) {
-          // Log queue removal error but don't fail session cancellation
           console.error('[Queue] Error removing from queue:', queueError);
         }
       }
     } catch (error) {
       console.error('Error cancelling session:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Cancel a session with custom priority and position options.
+   * By default, cancelSession auto-requeues. Use this method to override priority or position.
+   * If the original session has no mentor_id, the session will be cancelled only.
+   */
+  static async cancelAndRequeueSession(
+    sessionId: string,
+    reason?: string,
+    options: { priority?: 'low' | 'medium' | 'high' | 'urgent'; toTop?: boolean } = {}
+  ): Promise<void> {
+    // Fetch the session first to retain details needed for requeue
+    const session = await this.getSessionById(sessionId);
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found`);
+    }
+
+    // Perform cancellation without auto-requeue (skipRequeue=true)
+    await this.cancelSession(sessionId, reason, true);
+
+    // If there's an assigned mentor (AA), requeue with custom options
+    if (session.mentor_id) {
+      try {
+        // Determine campus from mentor profile
+        const mentorUser = await UserService.getUserById(session.mentor_id);
+        const campus = mentorUser?.campus || 'default';
+
+        await RollingQueueService.requeueSession(
+          sessionId,
+          session.student_id,
+          session.mentor_id,
+          campus,
+          { priority: options.priority ?? session.priority ?? 'medium', toTop: options.toTop ?? true }
+        );
+
+        // Reflect that the session is back to assigned state for visibility
+        await this.updateSession(sessionId, {
+          status: 'assigned',
+          assigned_at: new Date(),
+          cancel_reason: reason,
+          updated_at: new Date(),
+        });
+
+        console.log(`[Queue] Requeued cancelled session ${sessionId} with custom options:`, options);
+      } catch (queueError) {
+        console.error('[Queue] Error requeuing session after cancellation:', queueError);
+      }
     }
   }
 
