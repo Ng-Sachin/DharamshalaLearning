@@ -32,29 +32,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state
+  // Initialize auth state - simple listener only
   useEffect(() => {
-    const initializeAuth = async () => {
-      // Check for redirect result first
-      try {
-        await AuthService.handleRedirectResult();
-      } catch (error) {
-        console.error('Error handling redirect result:', error);
-      }
-    };
-
-    initializeAuth();
-
+    console.log('🚀 Initializing auth listener...');
+    
     const unsubscribe = AuthService.onAuthStateChanged(async (user) => {
+      console.log('👤 Auth state changed:', user ? user.email : 'no user');
       setCurrentUser(user);
       
       if (user) {
-        // Get user data from Firestore
+        // Load user data from Firestore
         try {
+          console.log('📥 Loading user data...');
           const data = await AuthService.getCurrentUserData();
+          console.log('✅ User data loaded:', data?.name);
           setUserData(data);
         } catch (error) {
-          console.error('Error loading user data:', error);
+          console.error('❌ Error loading user data:', error);
           setUserData(null);
         }
       } else {

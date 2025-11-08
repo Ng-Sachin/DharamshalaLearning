@@ -10,6 +10,8 @@ interface CacheEntry<T> {
 
 class QueryCache {
   private cache = new Map<string, CacheEntry<any>>();
+  // Coalesce concurrent requests for the same key to a single fetch
+  private inFlight = new Map<string, Promise<any>>();
   private defaultTTL = 5 * 60 * 1000; // 5 minutes default
 
   /**
@@ -28,17 +30,32 @@ class QueryCache {
       return cached.data as T;
     }
 
-    // Fetch fresh data
-    console.log(`🔄 Cache MISS: ${key} - Fetching from Firestore...`);
-    const data = await fetchFn();
-    
-    // Store in cache
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now()
-    });
+    // If a fetch is already in-flight for this key, reuse it
+    const existing = this.inFlight.get(key);
+    if (existing) {
+      console.log(`⏳ Cache INFLIGHT: ${key} - Reusing ongoing fetch`);
+      return existing as Promise<T>;
+    }
 
-    return data;
+    // Fetch fresh data with coalescing
+    console.log(`🔄 Cache MISS: ${key} - Fetching from Firestore...`);
+    const promise = (async () => {
+      try {
+        const data = await fetchFn();
+        // Store in cache
+        this.cache.set(key, {
+          data,
+          timestamp: Date.now()
+        });
+        return data;
+      } finally {
+        // Ensure cleanup
+        this.inFlight.delete(key);
+      }
+    })();
+
+    this.inFlight.set(key, promise);
+    return promise as Promise<T>;
   }
 
   /**

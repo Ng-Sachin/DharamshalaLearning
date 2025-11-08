@@ -123,13 +123,11 @@ const GoalSetting: React.FC = () => {
           }
         }
       }
-      // Get topics count for all phases
-      const topicsData = await Promise.all(phasesData.map(phase => TopicService.getTopicsByPhase(phase.id)));
-      const totalTopics = topicsData.reduce((acc, topics) => acc + topics.length, 0);
       
+      // Set curriculum status (topics will be loaded on-demand when phase is selected)
       setDataStatus({
         phasesCount: phasesData.length,
-        topicsCount: totalTopics,
+        topicsCount: 0, // Not needed - topics loaded per phase on-demand
         isSeeded: phasesData.length > 0
       });
 
@@ -647,7 +645,7 @@ const GoalSetting: React.FC = () => {
             <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md">
               <div className="flex items-center space-x-2">
                 <BookOpen className="h-5 w-5" />
-                <span>Curriculum loaded: {dataStatus.phasesCount} phases, {dataStatus.topicsCount} topics</span>
+                <span>Curriculum loaded: {dataStatus.phasesCount} phases available</span>
               </div>
             </div>
           )}
@@ -747,12 +745,12 @@ const GoalSetting: React.FC = () => {
       <div className="fixed left-0 top-1/2 transform -translate-y-1/2 z-30">
         <button
           onClick={() => setShowFeedback(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-4 rounded-r-lg shadow-lg transition-all duration-200 flex items-center gap-2 group min-w-[60px]"
+          className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-4 rounded-r-lg shadow-lg transition-all duration-200 flex flex-col items-center justify-center gap-1 group"
           title="View SMART Feedback"
         >
-          <div className="flex flex-col items-center">
-            <span className="text-xs font-medium transform -rotate-90 whitespace-nowrap leading-tight">SMART</span>
-            <span className="text-xs font-medium transform -rotate-90 whitespace-nowrap leading-tight">Feedback</span>
+          <div className="flex flex-col items-center gap-0">
+            <span className="text-xs font-medium whitespace-nowrap">SMART</span>
+            <span className="text-xs font-medium whitespace-nowrap">Feedback</span>
           </div>
           <div className="w-2 h-2 bg-white rounded-full opacity-70 group-hover:opacity-100 transition-opacity"></div>
         </button>

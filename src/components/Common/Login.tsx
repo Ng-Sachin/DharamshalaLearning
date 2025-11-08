@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { AuthService } from '../../services/auth';
 
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [checkingRedirect, setCheckingRedirect] = useState(true);
 
   const { signInWithGoogle, currentUser, userData } = useAuth();
   const navigate = useNavigate();
@@ -14,32 +12,10 @@ const Login: React.FC = () => {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
-  // Check for redirect result on component mount (for users returning from Google OAuth)
-  useEffect(() => {
-    const checkRedirectResult = async () => {
-      try {
-        setCheckingRedirect(true);
-        const result = await AuthService.handleRedirectResult();
-        if (result) {
-          // User successfully signed in via redirect
-          console.log('User signed in via redirect:', result);
-          setTimeout(() => {
-            navigate(from, { replace: true });
-          }, 500);
-        }
-      } catch (error) {
-        console.error('Error checking redirect result:', error);
-      } finally {
-        setCheckingRedirect(false);
-      }
-    };
-
-    checkRedirectResult();
-  }, [navigate, from]);
-
-  // Redirect if already logged in
+  // Simple redirect when user is logged in
   useEffect(() => {
     if (currentUser && userData) {
+      console.log('✅ User logged in, redirecting to:', from);
       navigate(from, { replace: true });
     }
   }, [currentUser, userData, navigate, from]);
@@ -48,52 +24,37 @@ const Login: React.FC = () => {
     try {
       setError('');
       setLoading(true);
-      const user = await signInWithGoogle();
       
-      // Wait a bit for user data to be loaded
-      if (user) {
-        // Small delay to ensure userData is loaded in context
-        setTimeout(() => {
-          navigate(from, { replace: true });
-        }, 500);
-      }
+      await signInWithGoogle();
+      // AuthContext will handle loading user data and the useEffect above will redirect
     } catch (error: any) {
-      console.error('Google sign in error:', error);
-      
-      if (error.message === 'Redirect initiated') {
-        // Redirect is happening, don't show error
-        setError('Redirecting to Google...');
-        return;
-      }
-      
-      // Provide more specific error messages
-      let errorMessage = 'Failed to sign in with Google. Please try again.';
-      
-      if (error.message && error.message.includes('Access denied')) {
-        // Domain restriction error
-        errorMessage = error.message;
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup was blocked. Redirecting to Google sign-in...';
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        errorMessage = 'Sign-in cancelled. Redirecting...';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your internet connection.';
-      } else if (error.code === 'auth/internal-error') {
-        errorMessage = 'An error occurred. Trying alternate sign-in method...';
-      }
-      
-      setError(errorMessage);
+      console.error('Sign in error:', error);
       setLoading(false);
+      
+      // Handle specific error cases
+      if (error.message?.includes('Access denied')) {
+        setError(error.message);
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setError('Sign-in cancelled. Please try again.');
+      } else if (error.code === 'auth/network-request-failed') {
+        setError('Network error. Please check your connection.');
+      } else if (error.message === 'Redirect initiated') {
+        setError('Redirecting to Google...');
+      } else {
+        setError('Failed to sign in. Please try again.');
+      }
     }
   };
 
-  // Show loading state while checking redirect
-  if (checkingRedirect) {
+  // Show loading state while signing in or waiting for user data
+  if (loading || (currentUser && !userData)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking sign-in status...</p>
+          <p className="mt-4 text-gray-600">
+            {currentUser ? 'Loading your profile...' : 'Signing in...'}
+          </p>
         </div>
       </div>
     );

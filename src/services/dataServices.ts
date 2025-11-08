@@ -159,7 +159,10 @@ export class GoalService extends FirestoreService {
 
   static async createGoal(goalData: Omit<DailyGoal, 'id'>): Promise<string> {
     try {
-      return await this.create<DailyGoal>(COLLECTIONS.DAILY_GOALS, goalData);
+      const id = await this.create<DailyGoal>(COLLECTIONS.DAILY_GOALS, goalData);
+      // Invalidate per-student goals cache
+      queryCache.invalidate(`goals:student:${(goalData as any).student_id}`);
+      return id;
     } catch (error) {
       console.error('Error creating goal:', error);
       throw error;
@@ -168,17 +171,20 @@ export class GoalService extends FirestoreService {
 
   static async getGoalsByStudent(studentId: string, limit?: number): Promise<DailyGoal[]> {
     try {
-      // Get goals without ordering to avoid composite index requirement
-      const goals = await this.getWhere<DailyGoal>(
-        COLLECTIONS.DAILY_GOALS,
-        'student_id',
-        '==',
-        studentId
+      return await queryCache.get<DailyGoal[]>(
+        `goals:student:${studentId}`,
+        async () => {
+          const goals = await this.getWhere<DailyGoal>(
+            COLLECTIONS.DAILY_GOALS,
+            'student_id',
+            '==',
+            studentId
+          );
+          const sorted = goals.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+          return limit ? sorted.slice(0, limit) : sorted;
+        },
+        CACHE_TTL.SHORT
       );
-
-      // Sort by created_at desc client-side
-      const sorted = goals.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
-      return limit ? sorted.slice(0, limit) : sorted;
     } catch (error) {
       console.error('Error fetching goals by student:', error);
       throw error;
@@ -289,7 +295,9 @@ export class ReflectionService extends FirestoreService {
 
   static async createReflection(reflectionData: Omit<DailyReflection, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
     try {
-      return await this.create<DailyReflection>(COLLECTIONS.DAILY_REFLECTIONS, reflectionData as any);
+      const id = await this.create<DailyReflection>(COLLECTIONS.DAILY_REFLECTIONS, reflectionData as any);
+      queryCache.invalidate(`reflections:student:${(reflectionData as any).student_id}`);
+      return id;
     } catch (error) {
       console.error('Error creating reflection:', error);
       throw error;
@@ -298,15 +306,19 @@ export class ReflectionService extends FirestoreService {
 
   static async getReflectionsByStudent(studentId: string): Promise<DailyReflection[]> {
     try {
-      // Get without ordering to avoid composite index requirement
-      const reflections = await this.getWhere<DailyReflection>(
-        COLLECTIONS.DAILY_REFLECTIONS,
-        'student_id',
-        '==',
-        studentId
+      return await queryCache.get<DailyReflection[]>(
+        `reflections:student:${studentId}`,
+        async () => {
+          const reflections = await this.getWhere<DailyReflection>(
+            COLLECTIONS.DAILY_REFLECTIONS,
+            'student_id',
+            '==',
+            studentId
+          );
+          return reflections.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+        },
+        CACHE_TTL.SHORT
       );
-      // Sort by created_at desc client-side
-      return reflections.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
     } catch (error) {
       console.error('Error fetching reflections by student:', error);
       throw error;
@@ -366,8 +378,9 @@ export class ReflectionService extends FirestoreService {
         feedback_given_at: new Date()
       };
 
-      // Only add mentor_notes if it has a value (Firestore doesn't allow undefined)
-      if (mentorNotes !== undefined && mentorNotes !== null) {
+
+      // Only add mentor_notes if it is not undefined or null (Firestore doesn't allow undefined)
+      if (typeof mentorNotes !== 'undefined' && mentorNotes !== null) {
         updateData.mentor_notes = mentorNotes;
       }
 
@@ -501,10 +514,13 @@ export class AttendanceService extends FirestoreService {
       if (existingAttendance) {
         // Update existing attendance
         await this.update<Attendance>(COLLECTIONS.ATTENDANCE, existingAttendance.id, attendanceData);
+        queryCache.invalidate(`attendance:student:${attendanceData.student_id}`);
         return existingAttendance.id;
       } else {
         // Create new attendance record
-        return await this.create<Attendance>(COLLECTIONS.ATTENDANCE, attendanceData);
+        const id = await this.create<Attendance>(COLLECTIONS.ATTENDANCE, attendanceData);
+        queryCache.invalidate(`attendance:student:${attendanceData.student_id}`);
+        return id;
       }
     } catch (error) {
       console.error('Error marking attendance:', error);
@@ -522,14 +538,9 @@ export class AttendanceService extends FirestoreService {
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const attendance = await this.getWhere<Attendance>(
-        COLLECTIONS.ATTENDANCE,
-        'student_id',
-        '==',
-        studentId
-      );
+      // Reuse cached list to avoid additional read
+      const attendance = await this.getStudentAttendance(studentId);
 
-      // Filter by date range (client-side)
       return attendance.find(record => {
         const recordDate = record.date instanceof Date ? record.date : new Date(record.date);
         return recordDate >= startOfDay && recordDate <= endOfDay;
@@ -546,20 +557,23 @@ export class AttendanceService extends FirestoreService {
     endDate?: Date
   ): Promise<Attendance[]> {
     try {
-      // Remove ordering to avoid index requirement, sort client-side if needed
-      const attendanceRecords = await this.getWhere<Attendance>(
-        COLLECTIONS.ATTENDANCE,
-        'student_id',
-        '==',
-        studentId
+      return await queryCache.get<Attendance[]>(
+        `attendance:student:${studentId}`,
+        async () => {
+          const attendanceRecords = await this.getWhere<Attendance>(
+            COLLECTIONS.ATTENDANCE,
+            'student_id',
+            '==',
+            studentId
+          );
+          return attendanceRecords.sort((a, b) => {
+            const dateA = a.date instanceof Date ? a.date : new Date(a.date);
+            const dateB = b.date instanceof Date ? b.date : new Date(b.date);
+            return dateB.getTime() - dateA.getTime();
+          });
+        },
+        CACHE_TTL.SHORT
       );
-
-      // Sort by date descending client-side
-      return attendanceRecords.sort((a, b) => {
-        const dateA = a.date instanceof Date ? a.date : new Date(a.date);
-        const dateB = b.date instanceof Date ? b.date : new Date(b.date);
-        return dateB.getTime() - dateA.getTime();
-      });
     } catch (error) {
       console.error('Error fetching student attendance:', error);
       throw error;
@@ -582,6 +596,7 @@ export class AttendanceService extends FirestoreService {
           reflection_reviewed: reflectionReviewed,
           present_status: presentStatus
         });
+        queryCache.invalidate(`attendance:student:${studentId}`);
       } else {
         // Create new attendance record
         const presentStatus = (goalReviewed && reflectionReviewed) ? 'present' : 'absent';
@@ -1036,7 +1051,109 @@ export class MentorshipService extends FirestoreService {
   }
 
   /**
-   * Get all mentors with capacity information
+   * Get all mentors with capacity information (paginated)
+   * @param limit - Number of mentors to fetch per page (default: 20)
+   * @param startAfterDoc - Firestore document snapshot to start after (for pagination)
+   * @returns Object with mentors array, hasMore flag, and lastDoc for next page
+   */
+  static async getMentorsWithCapacityPaginated(
+    limit: number = 20,
+    startAfterDoc?: any
+  ): Promise<{
+    mentors: MentorWithCapacity[];
+    hasMore: boolean;
+    lastDoc: any;
+  }> {
+    try {
+      console.log(`🔍 MentorshipService: Loading paginated mentors (limit: ${limit})...`);
+      const { UserService } = await import('./firestore');
+      const { db } = await import('./firebase');
+      const { collection, query, orderBy, limit: firestoreLimit, startAfter, getDocs } = await import('firebase/firestore');
+      
+      // Build paginated query for users collection
+      let userQuery = query(
+        collection(db, 'users'),
+        orderBy('name', 'asc'),
+        firestoreLimit(limit + 1) // Fetch one extra to check if there are more
+      );
+      
+      // If startAfterDoc is provided, continue from that point
+      if (startAfterDoc) {
+        userQuery = query(
+          collection(db, 'users'),
+          orderBy('name', 'asc'),
+          startAfter(startAfterDoc),
+          firestoreLimit(limit + 1)
+        );
+      }
+      
+      const querySnapshot = await getDocs(userQuery);
+      const docs = querySnapshot.docs;
+      
+      // Check if there are more results
+      const hasMore = docs.length > limit;
+      const userDocs = hasMore ? docs.slice(0, limit) : docs;
+      const lastDoc = userDocs.length > 0 ? userDocs[userDocs.length - 1] : null;
+      
+      console.log(`📋 MentorshipService: Fetched ${userDocs.length} users, hasMore: ${hasMore}`);
+      
+      // Convert docs to User objects
+      const users = userDocs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+      
+      // Get capacity for each user in parallel (more efficient than sequential)
+      const mentorsWithCapacity = await Promise.all(
+        users.map(async (user) => {
+          try {
+            // Get all students assigned to this user as mentor
+            const mentees = await UserService.getStudentsByMentor(user.id);
+            
+            // Determine max mentees: super mentors = unlimited (999), regular = max_mentees or default 2
+            const maxMentees = user.isSuperMentor 
+              ? 999 
+              : (user.max_mentees || 2);
+            const currentMentees = mentees.length;
+            const availableSlots = user.isSuperMentor ? 999 : Math.max(0, maxMentees - currentMentees);
+            
+            return {
+              mentor: user,
+              current_mentees: currentMentees,
+              max_mentees: maxMentees,
+              available_slots: availableSlots,
+              mentee_names: mentees.map(m => m.name)
+            };
+          } catch (userError) {
+            console.warn(`⚠️ MentorshipService: Error processing user ${user.id}:`, userError);
+            // Return basic info if capacity check fails
+            return {
+              mentor: user,
+              current_mentees: 0,
+              max_mentees: user.isSuperMentor ? 999 : (user.max_mentees || 2),
+              available_slots: user.isSuperMentor ? 999 : (user.max_mentees || 2),
+              mentee_names: []
+            };
+          }
+        })
+      );
+      
+      console.log(`✅ MentorshipService: Processed ${mentorsWithCapacity.length} mentors with capacity`);
+      
+      return {
+        mentors: mentorsWithCapacity,
+        hasMore,
+        lastDoc
+      };
+    } catch (error) {
+      console.error('❌ MentorshipService: Error getting paginated mentors:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all mentors with capacity information (backward compatible - loads all)
+   * @deprecated Use getMentorsWithCapacityPaginated for better performance
    */
   static async getAllMentorsWithCapacity(): Promise<MentorWithCapacity[]> {
     try {
@@ -1053,34 +1170,41 @@ export class MentorshipService extends FirestoreService {
           const allUsers = await UserService['getAll']<User>('users');
           console.log(`✅ MentorshipService: Found ${allUsers.length} users`);
 
-          // Get capacity for each user
-          const mentorsWithCapacity: MentorWithCapacity[] = [];
-          
-          for (const user of allUsers) {
-            try {
-              // All users are considered as mentors
-              // Get all students assigned to this user as mentor
-              const mentees = await UserService.getStudentsByMentor(user.id);
-              
-              // Determine max mentees: super mentors = unlimited (999), regular = max_mentees or default 2
-              const maxMentees = user.isSuperMentor 
-                ? 999 
-                : (user.max_mentees || 2);
-              const currentMentees = mentees.length;
-              const availableSlots = user.isSuperMentor ? 999 : Math.max(0, maxMentees - currentMentees);
-              
-              mentorsWithCapacity.push({
-                mentor: user,
-                current_mentees: currentMentees,
-                max_mentees: maxMentees,
-                available_slots: availableSlots,
-                mentee_names: mentees.map(m => m.name)
-              });
-            } catch (userError) {
-              console.warn(`⚠️ MentorshipService: Error processing user ${user.id}:`, userError);
-              // Continue processing other users even if one fails
-            }
-          }
+          // Get capacity for each user in parallel (more efficient than sequential)
+          const mentorsWithCapacity = await Promise.all(
+            allUsers.map(async (user) => {
+              try {
+                // All users are considered as mentors
+                // Get all students assigned to this user as mentor
+                const mentees = await UserService.getStudentsByMentor(user.id);
+                
+                // Determine max mentees: super mentors = unlimited (999), regular = max_mentees or default 2
+                const maxMentees = user.isSuperMentor 
+                  ? 999 
+                  : (user.max_mentees || 2);
+                const currentMentees = mentees.length;
+                const availableSlots = user.isSuperMentor ? 999 : Math.max(0, maxMentees - currentMentees);
+                
+                return {
+                  mentor: user,
+                  current_mentees: currentMentees,
+                  max_mentees: maxMentees,
+                  available_slots: availableSlots,
+                  mentee_names: mentees.map(m => m.name)
+                };
+              } catch (userError) {
+                console.warn(`⚠️ MentorshipService: Error processing user ${user.id}:`, userError);
+                // Return basic info if capacity check fails
+                return {
+                  mentor: user,
+                  current_mentees: 0,
+                  max_mentees: user.isSuperMentor ? 999 : (user.max_mentees || 2),
+                  available_slots: user.isSuperMentor ? 999 : (user.max_mentees || 2),
+                  mentee_names: []
+                };
+              }
+            })
+          );
 
           console.log(`✅ MentorshipService: Processed ${mentorsWithCapacity.length} mentors with capacity`);
           return mentorsWithCapacity;

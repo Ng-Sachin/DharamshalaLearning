@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModal } from '../../hooks/useModal';
@@ -84,83 +84,73 @@ const StudentDashboard: React.FC = () => {
     () => setShowReviewModal(false)
   );
 
+  // Prevent duplicate loads in React StrictMode (dev) or rapid re-renders
+  const loadingRef = useRef(false);
+  const lastLoadedUserRef = useRef<string | null>(null);
+
   const loadDashboardData = useCallback(async () => {
     if (!userData) return;
+
+    // Skip if already loading or same user loaded in this render tick
+    if (loadingRef.current) return;
+    loadingRef.current = true;
 
     try {
       setLoading(true);
       console.log('📊 [StudentDashboard] Loading dashboard data for user:', userData.id);
 
-      // Load today's goal and reflection
-      console.log('🎯 [StudentDashboard] Fetching today\'s goal...');
+      // Fetch batching: goals, reflections, attendance, leaves, sessions, and reviews
+      const [recentGoals, allReflections, attendanceRecords, leaves, pairProgrammingRequests, latestReviewMaybe] = await Promise.all([
+        GoalService.getGoalsByStudent(userData.id, 10),
+        ReflectionService.getReflectionsByStudent(userData.id),
+        AttendanceService.getStudentAttendance(userData.id),
+        LeaveService.getStudentLeaves(userData.id),
+        EnhancedPairProgrammingService.getSessionsByUser(userData.id, 'mentee').catch(() => []),
+        MenteeReviewService.getLatestReview(userData.id).catch(() => null)
+      ]);
+
+      // Today's goal and reflection (compute client-side from cached lists)
+      console.log('🎯 [StudentDashboard] Computing today\'s goal from cached goals...');
       const todayGoal = await GoalService.getTodaysGoal(userData.id);
-      console.log('🎯 [StudentDashboard] Today\'s goal result:', todayGoal);
-      let todayReflection = null;
-      
-      if (todayGoal) {
-        todayReflection = await ReflectionService.getReflectionByGoal(todayGoal.id);
-      }
+      const todayReflection = todayGoal
+        ? (allReflections.find(r => (r as any).goal_id === todayGoal.id) || null)
+        : null;
 
-      // Load recent goals for achievement calculation
-      console.log('📋 [StudentDashboard] Fetching recent goals...');
-      const recentGoals = await GoalService.getGoalsByStudent(userData.id, 10);
-      console.log('📋 [StudentDashboard] Recent goals count:', recentGoals.length, recentGoals);
-      
-      // Calculate average achievement from recent reflections
-      const goalIds = recentGoals.map(goal => goal.id);
-      const reflections: DailyReflection[] = [];
-      
-      for (const goalId of goalIds) {
-        const reflection = await ReflectionService.getReflectionByGoal(goalId);
-        if (reflection) {
-          reflections.push(reflection);
-        }
-      }
-
-      const averageAchievement = reflections.length > 0
-        ? reflections.reduce((sum, r) => sum + r.achieved_percentage, 0) / reflections.length
+      // Average achievement from recent reflections (use single reflections list)
+      const goalIds = new Set(recentGoals.map(g => g.id));
+      const recentReflections = allReflections.filter(r => goalIds.has((r as any).goal_id));
+      const averageAchievement = recentReflections.length > 0
+        ? recentReflections.reduce((sum, r) => sum + (r as any).achieved_percentage, 0) / recentReflections.length
         : 0;
 
-      // Load pair programming sessions
-      let completedSessions = 0;
-      try {
-        const pairProgrammingRequests = await EnhancedPairProgrammingService.getSessionsByUser(userData.id, 'mentee');
-        completedSessions = pairProgrammingRequests.filter(req => req.status === 'completed').length;
-        console.log('👥 [StudentDashboard] Pair programming sessions loaded:', completedSessions);
-      } catch (error) {
-        console.warn('⚠️ [StudentDashboard] Failed to load pair programming sessions:', error);
-        // Continue with default value of 0
-      }
+      // Pair programming sessions
+      const completedSessions = Array.isArray(pairProgrammingRequests)
+        ? pairProgrammingRequests.filter((req: any) => req.status === 'completed').length
+        : 0;
 
-      // Load attendance data (simplified calculation)
+      // Attendance (last 30 days)
       let monthlyAttendance = 0;
       try {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const attendanceRecords = await AttendanceService.getStudentAttendance(userData.id);
-      
         const recentAttendance = attendanceRecords.filter(record => {
-          const recordDate = new Date(record.date);
+          const recordDate = new Date(record.date as any);
           return recordDate >= thirtyDaysAgo;
         });
-
         const presentDays = recentAttendance.filter(record => record.present_status === 'present').length;
         monthlyAttendance = recentAttendance.length > 0 ? (presentDays / recentAttendance.length) * 100 : 0;
         console.log('📅 [StudentDashboard] Attendance loaded:', monthlyAttendance + '%');
       } catch (error) {
-        console.warn('⚠️ [StudentDashboard] Failed to load attendance:', error);
-        // Continue with default value of 0
+        console.warn('⚠️ [StudentDashboard] Failed to compute attendance:', error);
       }
 
-      // Load leaves
+      // Leaves (current year)
       let leaveDaysTaken = 0;
       try {
-        const leaves = await LeaveService.getStudentLeaves(userData.id);
         const currentYear = new Date().getFullYear();
         const currentYearLeaves = leaves.filter(leave => 
           new Date(leave.start_date).getFullYear() === currentYear
         );
-        
         leaveDaysTaken = currentYearLeaves.reduce((total, leave) => {
           const start = new Date(leave.start_date);
           const end = new Date(leave.end_date);
@@ -170,12 +160,11 @@ const StudentDashboard: React.FC = () => {
         }, 0);
         console.log('🏖️ [StudentDashboard] Leaves loaded, days taken:', leaveDaysTaken);
       } catch (error) {
-        console.warn('⚠️ [StudentDashboard] Failed to load leaves:', error);
-        // Continue with default value of 0
+        console.warn('⚠️ [StudentDashboard] Failed to compute leaves:', error);
       }
 
-      // Load latest review
-      let latestReview: any = null;
+      // Reviews
+      let latestReview: any = latestReviewMaybe;
       let reviewScore = 0;
       let reviewHistory: any[] = [];
       let reviewTrend: 'improving' | 'declining' | 'stable' = 'stable';
@@ -183,15 +172,10 @@ const StudentDashboard: React.FC = () => {
       let monthlyAvg = 0;
       try {
         console.log('📊 [StudentDashboard] Loading review for user:', userData.id);
-        latestReview = await MenteeReviewService.getLatestReview(userData.id);
-        console.log('📊 [StudentDashboard] Latest review result:', latestReview);
-
-        // Load review history for trend analysis and averages
         if (latestReview) {
           reviewHistory = await MenteeReviewService.getReviewsByStudent(userData.id);
           console.log('📊 [StudentDashboard] Review history:', reviewHistory.length, 'reviews');
 
-          // Calculate average score
           const scores = [
             latestReview.morning_exercise,
             latestReview.communication,
@@ -201,7 +185,6 @@ const StudentDashboard: React.FC = () => {
           ];
           reviewScore = Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
 
-          // Calculate weekly and monthly averages
           const now = new Date();
           const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -237,11 +220,10 @@ const StudentDashboard: React.FC = () => {
             monthlyAvg = Math.round(monthlyTotal / monthlyReviews.length);
           }
 
-          // Calculate trend if we have at least 2 reviews
           if (reviewHistory.length >= 2) {
             const sortedReviews = reviewHistory
               .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-              .slice(0, 3); // Last 3 reviews
+              .slice(0, 3);
 
             const recentAvg = sortedReviews.slice(0, 2).map(review => {
               const scores = [
@@ -284,17 +266,20 @@ const StudentDashboard: React.FC = () => {
       };
       console.log('✅ [StudentDashboard] Final stats:', finalStats);
       setStats(finalStats);
+      lastLoadedUserRef.current = userData.id;
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [userData]);
 
   useEffect(() => {
-    if (userData) {
-      loadDashboardData();
-    }
+    if (!userData) return;
+    // Avoid duplicate run in StrictMode by ensuring a change in user or manual trigger
+    if (lastLoadedUserRef.current === userData.id && loadingRef.current) return;
+    loadDashboardData();
   }, [userData, loadDashboardData]);
 
   useEffect(() => {
@@ -766,7 +751,7 @@ const StudentDashboard: React.FC = () => {
           
           {stats.recentGoals.length > 0 ? (
             <div className="space-y-4">
-              {stats.recentGoals.slice(0, 5).map((goal) => (
+              {stats.recentGoals.slice(0, 3).map((goal) => (
                 <div key={goal.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900 line-clamp-2">

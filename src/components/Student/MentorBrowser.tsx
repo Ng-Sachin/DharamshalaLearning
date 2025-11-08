@@ -22,10 +22,10 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
   onRequestSubmitted 
 }) => {
   const { userData } = useAuth();
-  const [mentors, setMentors] = useState<MentorWithCapacity[]>([]);
-  const [filteredMentors, setFilteredMentors] = useState<MentorWithCapacity[]>([]);
+  const [allMentors, setAllMentors] = useState<MentorWithCapacity[]>([]);
   const [visibleMentors, setVisibleMentors] = useState<MentorWithCapacity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedMentor, setSelectedMentor] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +33,7 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [hasMore, setHasMore] = useState(true);
+  const [lastDoc, setLastDoc] = useState<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [campusFilter, setCampusFilter] = useState<string>(userData?.campus || 'all');
   const [houseFilter, setHouseFilter] = useState<string>(userData?.house || 'all');
@@ -57,32 +58,27 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
     checkPendingRequest();
   }, [currentStudentId]);
 
-  // Load mentors when component mounts - this ensures fresh data every time the modal opens
+  // Load initial page of mentors when component mounts
   useEffect(() => {
-    const loadMentors = async () => {
+    const loadInitialMentors = async () => {
       setLoading(true);
       setError('');
-      setSuccess(''); // Clear previous success messages
-      setSelectedMentor(null); // Reset selection
-      setReason(''); // Clear reason
+      setSuccess('');
+      setSelectedMentor(null);
+      setReason('');
       try {
-        console.log('🔍 [MentorBrowser] Starting to load mentors...');
-        const allMentors = await MentorshipService.getAllMentorsWithCapacity();
-        console.log('✅ [MentorBrowser] Received mentors:', allMentors.length);
+        console.log('🔍 [MentorBrowser] Loading initial page of mentors...');
+        const result = await MentorshipService.getMentorsWithCapacityPaginated(ITEMS_PER_PAGE);
+        console.log(`✅ [MentorBrowser] Received ${result.mentors.length} mentors, hasMore: ${result.hasMore}`);
         
-        const filtered = allMentors.filter(m => m.mentor.id !== currentStudentId);
-        console.log('✅ [MentorBrowser] Filtered mentors (excluding self):', filtered.length);
+        const filtered = result.mentors.filter(m => m.mentor.id !== currentStudentId);
+        console.log(`✅ [MentorBrowser] Filtered mentors (excluding self): ${filtered.length}`);
         
-        const sorted = filtered.sort((a, b) => {
-          const nameA = a.mentor.name || a.mentor.email || '';
-          const nameB = b.mentor.name || b.mentor.email || '';
-          return nameA.localeCompare(nameB);
-        });
-        console.log('✅ [MentorBrowser] Setting mentors state with:', sorted.length, 'mentors');
+        setAllMentors(filtered);
+        setLastDoc(result.lastDoc);
+        setHasMore(result.hasMore);
         
-        setMentors(sorted);
-        
-        if (sorted.length === 0) {
+        if (filtered.length === 0) {
           setError('No mentors available at the moment.');
         }
       } catch (error) {
@@ -92,11 +88,34 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
         setLoading(false);
       }
     };
-    loadMentors();
+    loadInitialMentors();
   }, [currentStudentId]);
 
+  // Load more mentors when scrolling
+  const loadMoreMentors = async () => {
+    if (loadingMore || !hasMore || !lastDoc) return;
+    
+    setLoadingMore(true);
+    try {
+      console.log('🔍 [MentorBrowser] Loading more mentors...');
+      const result = await MentorshipService.getMentorsWithCapacityPaginated(ITEMS_PER_PAGE, lastDoc);
+      console.log(`✅ [MentorBrowser] Received ${result.mentors.length} more mentors, hasMore: ${result.hasMore}`);
+      
+      const filtered = result.mentors.filter(m => m.mentor.id !== currentStudentId);
+      setAllMentors(prev => [...prev, ...filtered]);
+      setLastDoc(result.lastDoc);
+      setHasMore(result.hasMore);
+    } catch (error) {
+      console.error('❌ [MentorBrowser] Error loading more mentors:', error);
+      setError('Failed to load more mentors.');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Apply client-side filters
   useEffect(() => {
-    let filtered = [...mentors];
+    let filtered = [...allMentors];
     if (userData?.current_phase_id && Number(userData.current_phase_id) > 0) {
       const studentPhase = Number(userData.current_phase_id);
       filtered = filtered.filter(m => Number(m.mentor.current_phase_id) > studentPhase);
@@ -114,22 +133,16 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
     if (houseFilter !== 'all') {
       filtered = filtered.filter(m => m.mentor.house === houseFilter);
     }
-    setFilteredMentors(filtered);
-    setVisibleMentors(filtered.slice(0, ITEMS_PER_PAGE));
-    setHasMore(filtered.length > ITEMS_PER_PAGE);
-  }, [mentors, userData, searchTerm, campusFilter, houseFilter]);
+    setVisibleMentors(filtered);
+  }, [allMentors, userData, searchTerm, campusFilter, houseFilter]);
 
+  // Handle scroll for infinite loading
   useEffect(() => {
     const handleScroll = () => {
-      if (!listRef.current || loading || !hasMore) return;
+      if (!listRef.current || loading || loadingMore || !hasMore) return;
       const { scrollTop, scrollHeight, clientHeight } = listRef.current;
       if (scrollTop + clientHeight >= scrollHeight - 50) {
-        setVisibleMentors(prev => {
-          const nextLength = prev.length + ITEMS_PER_PAGE;
-          const next = filteredMentors.slice(0, nextLength);
-          setHasMore(next.length < filteredMentors.length);
-          return next;
-        });
+        loadMoreMentors();
       }
     };
     const ref = listRef.current;
@@ -141,7 +154,8 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
         ref.removeEventListener('scroll', handleScroll);
       }
     };
-  }, [filteredMentors, loading, hasMore]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, loadingMore, hasMore, lastDoc]);
 
   const handleRequestMentor = async () => {
     if (!selectedMentor) {
@@ -290,7 +304,7 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
               <AlertCircle className="h-16 w-16 text-red-300 mx-auto mb-4" />
               <p className="text-gray-600">{error}</p>
             </div>
-          ) : filteredMentors.length === 0 ? (
+          ) : visibleMentors.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-600">No mentors found matching your criteria.</p>
@@ -374,7 +388,7 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
                   );
                 })}
               </div>
-              {hasMore && !loading && (
+              {loadingMore && (
                 <div className="flex justify-center items-center py-4 mt-4">
                   <Loader className="h-6 w-6 animate-spin text-primary-500" />
                   <span className="ml-2 text-gray-500 text-sm">Loading more mentors...</span>

@@ -1,6 +1,5 @@
 import {
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
@@ -31,30 +30,15 @@ export class AuthService {
     return this.googleProvider;
   }
 
-  // Sign in with Google using redirect (primary method)
+  // Sign in with Google using popup (simple and clean)
   static async signInWithGoogle(): Promise<FirebaseUser> {
     try {
-      // Use redirect method for better compatibility
-      await signInWithRedirect(auth, this.getGoogleProvider());
-      // This will cause a page redirect, so we won't reach this point
-      // The result will be handled by handleRedirectResult
-      throw new Error('Redirect initiated');
+      console.log('🔐 Signing in with Google...');
+      const result = await signInWithPopup(auth, this.getGoogleProvider());
+      console.log('✅ Sign-in successful:', result.user.email);
+      return await this.handleGoogleSignInResult(result.user);
     } catch (error: any) {
-      console.error('Error signing in with Google redirect:', error);
-      throw error;
-    }
-  }
-
-  // Handle redirect result after page reload
-  static async handleRedirectResult(): Promise<FirebaseUser | null> {
-    try {
-      const result = await getRedirectResult(auth);
-      if (result && result.user) {
-        return await this.handleGoogleSignInResult(result.user);
-      }
-      return null;
-    } catch (error) {
-      console.error('Error handling redirect result:', error);
+      console.error('❌ Sign-in failed:', error.code, error.message);
       throw error;
     }
   }

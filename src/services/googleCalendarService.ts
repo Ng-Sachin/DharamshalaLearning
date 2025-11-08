@@ -2,6 +2,7 @@ import { auth } from './firebase';
 
 declare global {
   interface Window {
+    google: any;
     gapi: any;
   }
 }
@@ -39,47 +40,45 @@ export interface PairProgrammingSlot {
 }
 
 class GoogleCalendarService {
+  private tokenClient: any = null;
+  private accessToken: string | null = null;
   private isAuthenticated = false;
-  private isGapiLoaded = false;
 
   constructor() {
-    this.initializeGapi();
+    this.initializeTokenClient();
   }
 
-  private async initializeGapi() {
+  private async initializeTokenClient() {
     try {
       // Check if Google client ID is configured
       const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
       if (!clientId || clientId === 'your_google_client_id_here') {
-        console.warn('Google API client ID not configured, skipping GAPI initialization');
+        console.warn('Google API client ID not configured, skipping TokenClient initialization');
         return;
       }
 
-      // Load the Google API client
-      await new Promise<void>((resolve, reject) => {
-        if (window.gapi) {
-          window.gapi.load('client:auth2', () => {
-            window.gapi.client.init({
-              clientId: clientId,
-              discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
-              scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-              ux_mode: 'redirect'
-            }).then(() => {
-              this.isGapiLoaded = true;
-              resolve();
-            }).catch((error: any) => {
-              console.warn('GAPI initialization failed, falling back to Firebase Auth tokens:', error);
-              // Don't reject, allow fallback to Firebase tokens
-              resolve();
-            });
-          });
-        } else {
-          console.warn('GAPI not loaded, using Firebase Auth tokens only');
-          resolve();
-        }
-      });
+      // Wait for Google Identity Services to load (new GIS)
+      if (window.google?.accounts?.oauth2) {
+        this.tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+          callback: (response: any) => {
+            if (response.error) {
+              console.error('Token client error:', response);
+              this.isAuthenticated = false;
+            } else {
+              this.accessToken = response.access_token;
+              this.isAuthenticated = true;
+              console.log('Token client success, access token obtained');
+            }
+          },
+        });
+        console.log('Initialized Google Identity Services TokenClient');
+      } else {
+        console.warn('Google Identity Services not available, will use Firebase Auth tokens only');
+      }
     } catch (error) {
-      console.warn('Failed to initialize GAPI, using Firebase Auth tokens:', error);
+      console.warn('Failed to initialize TokenClient, using Firebase Auth tokens:', error);
     }
   }
 
@@ -102,41 +101,27 @@ class GoogleCalendarService {
       try {
         const token = await user.getIdToken();
         if (token) {
-          // Initialize GAPI client with the token
-          if (!this.isGapiLoaded) {
-            await this.initializeGapi();
+          // For GIS, we need to request a new access token
+          if (this.tokenClient) {
+            return new Promise((resolve) => {
+              this.tokenClient.requestAccessToken({
+                prompt: '', // Use empty string for silent request
+              });
+              // The callback will set isAuthenticated
+              // We need to wait a bit for the callback
+              setTimeout(() => {
+                resolve(this.isAuthenticated);
+              }, 1000);
+            });
+          } else {
+            // Fallback: Try to use Firebase token directly with fetch
+            this.accessToken = token;
+            this.isAuthenticated = true;
+            return true;
           }
-
-          // Set the access token for GAPI
-          window.gapi.client.setToken({ access_token: token });
-          this.isAuthenticated = true;
-          return true;
         }
       } catch (tokenError) {
         console.warn('Failed to get Firebase token for Calendar API:', tokenError);
-      }
-
-      // Fallback: Try GAPI auth with redirect mode
-      try {
-        const authInstance = window.gapi?.auth2?.getAuthInstance();
-        if (authInstance && authInstance.isSignedIn?.get()) {
-          this.isAuthenticated = true;
-          return true;
-        }
-
-        // If GAPI is available but not signed in, redirect to Google OAuth
-        if (authInstance) {
-          // Use redirect mode instead of popup
-          authInstance.signIn({
-            prompt: 'consent',
-            scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-            ux_mode: 'redirect'
-          });
-          // This will redirect the page, so we won't reach here
-          return false;
-        }
-      } catch (gapiError) {
-        console.warn('GAPI authentication failed:', gapiError);
       }
 
       // If we get here, authentication failed
@@ -157,23 +142,39 @@ class GoogleCalendarService {
       return [];
     }
 
-    if (!this.isAuthenticated || !this.isGapiLoaded) {
+    if (!this.isAuthenticated || !this.accessToken) {
       console.warn('Google Calendar not authenticated, returning empty events');
       return [];
     }
 
     try {
-      const request = {
-        'calendarId': 'primary',
+      const params = new URLSearchParams({
         'timeMin': timeMin?.toISOString() || new Date().toISOString(),
-        'timeMax': timeMax?.toISOString(),
-        'singleEvents': true,
+        'singleEvents': 'true',
         'orderBy': 'startTime',
-      };
+      });
 
-      const response = await window.gapi.client.calendar.events.list(request);
+      if (timeMax) {
+        params.append('timeMax', timeMax.toISOString());
+      }
 
-      return response.result.items.map((event: any) => ({
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Accept': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Calendar API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      return data.items.map((event: any) => ({
         id: event.id,
         summary: event.summary,
         description: event.description,
@@ -203,7 +204,7 @@ class GoogleCalendarService {
       throw new Error('Google API client ID not configured');
     }
 
-    if (!this.isAuthenticated || !this.isGapiLoaded) {
+    if (!this.isAuthenticated || !this.accessToken) {
       throw new Error('Google Calendar not authenticated');
     }
 
@@ -223,22 +224,34 @@ class GoogleCalendarService {
         location: event.location,
       };
 
-      const request = {
-        'calendarId': 'primary',
-        'resource': calendarEvent,
-      };
+      const response = await fetch(
+        'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(calendarEvent),
+        }
+      );
 
-      const response = await window.gapi.client.calendar.events.insert(request);
+      if (!response.ok) {
+        throw new Error(`Calendar API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
 
       return {
-        id: response.result.id,
-        summary: response.result.summary,
-        description: response.result.description,
-        start: response.result.start,
-        end: response.result.end,
-        attendees: response.result.attendees,
-        location: response.result.location,
-        status: response.result.status,
+        id: data.id,
+        summary: data.summary,
+        description: data.description,
+        start: data.start,
+        end: data.end,
+        attendees: data.attendees,
+        location: data.location,
+        status: data.status,
       };
     } catch (error) {
       console.error('Failed to create calendar event:', error);
@@ -247,28 +260,39 @@ class GoogleCalendarService {
   }
 
   async updateCalendarEvent(eventId: string, updates: Partial<CalendarEvent>): Promise<CalendarEvent> {
-    if (!this.isAuthenticated || !this.isGapiLoaded) {
+    if (!this.isAuthenticated || !this.accessToken) {
       throw new Error('Google Calendar not authenticated');
     }
 
     try {
-      const request = {
-        'calendarId': 'primary',
-        'eventId': eventId,
-        'resource': updates,
-      };
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        }
+      );
 
-      const response = await window.gapi.client.calendar.events.patch(request);
+      if (!response.ok) {
+        throw new Error(`Calendar API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
 
       return {
-        id: response.result.id,
-        summary: response.result.summary,
-        description: response.result.description,
-        start: response.result.start,
-        end: response.result.end,
-        attendees: response.result.attendees,
-        location: response.result.location,
-        status: response.result.status,
+        id: data.id,
+        summary: data.summary,
+        description: data.description,
+        start: data.start,
+        end: data.end,
+        attendees: data.attendees,
+        location: data.location,
+        status: data.status,
       };
     } catch (error) {
       console.error('Failed to update calendar event:', error);
@@ -277,17 +301,25 @@ class GoogleCalendarService {
   }
 
   async deleteCalendarEvent(eventId: string): Promise<void> {
-    if (!this.isAuthenticated || !this.isGapiLoaded) {
+    if (!this.isAuthenticated || !this.accessToken) {
       throw new Error('Google Calendar not authenticated');
     }
 
     try {
-      const request = {
-        'calendarId': 'primary',
-        'eventId': eventId,
-      };
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Accept': 'application/json',
+          },
+        }
+      );
 
-      await window.gapi.client.calendar.events.delete(request);
+      if (!response.ok) {
+        throw new Error(`Calendar API error: ${response.status} ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Failed to delete calendar event:', error);
       throw error;

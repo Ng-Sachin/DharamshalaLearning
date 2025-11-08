@@ -18,6 +18,29 @@ import {
 import { db } from './firebase';
 import { User, MentorAvailability } from '../types';
 import { queryCache } from '../utils/cache';
+// Lightweight performance instrumentation for Firestore reads
+const firestorePerf = {
+  totalReads: 0,
+  ops: [] as Array<{ type: 'getDoc' | 'getDocs'; collection: string; count: number; ms: number }>,
+  log(op: { type: 'getDoc' | 'getDocs'; collection: string; count: number; ms: number }) {
+    this.totalReads += op.count;
+    this.ops.push(op);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📘[FS] ${op.collection} ${op.type} count=${op.count} ms=${op.ms.toFixed(1)}`);
+    }
+  },
+  summary() {
+    const byCollection: Record<string, number> = {};
+    for (const op of this.ops) {
+      byCollection[op.collection] = (byCollection[op.collection] || 0) + op.count;
+    }
+    console.log('📊 Firestore Read Summary:', { totalReads: this.totalReads, byCollection });
+  },
+  reset() {
+    this.totalReads = 0;
+    this.ops = [];
+  }
+};
 
 // Utility function to convert Firestore Timestamps to JavaScript Dates
 function convertTimestampsToDates(obj: any): any {
@@ -76,6 +99,7 @@ export class FirestoreService {
     orderByField?: string,
     orderDirection: 'asc' | 'desc' = 'desc'
   ): Promise<T[]> {
+    const start = performance.now();
     try {
       let queryConstraints: any[] = conditions.map(cond => where(cond.field, cond.operator, cond.value));
       if (orderByField) {
@@ -83,6 +107,7 @@ export class FirestoreService {
       }
       const q = query(collection(db, collectionName), ...queryConstraints);
       const querySnapshot = await getDocs(q);
+      firestorePerf.log({ type: 'getDocs', collection: collectionName, count: querySnapshot.size, ms: performance.now() - start });
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...convertTimestampsToDates(doc.data())
@@ -124,9 +149,11 @@ export class FirestoreService {
 
   // Get document by ID
   static async getById<T>(collectionName: string, id: string): Promise<T | null> {
+    const start = performance.now();
     try {
       const docRef = doc(db, collectionName, id);
       const docSnap = await getDoc(docRef);
+      firestorePerf.log({ type: 'getDoc', collection: collectionName, count: 1, ms: performance.now() - start });
       
       if (docSnap.exists()) {
         return { id: docSnap.id, ...convertTimestampsToDates(docSnap.data()) } as T;
@@ -145,6 +172,7 @@ export class FirestoreService {
     orderDirection: 'asc' | 'desc' = 'desc',
     limitCount?: number
   ): Promise<T[]> {
+    const start = performance.now();
     try {
       let q = collection(db, collectionName);
       let queryConstraints: any[] = [];
@@ -159,6 +187,7 @@ export class FirestoreService {
 
       const queryRef = queryConstraints.length > 0 ? query(q, ...queryConstraints) : q;
       const querySnapshot = await getDocs(queryRef);
+      firestorePerf.log({ type: 'getDocs', collection: collectionName, count: querySnapshot.size, ms: performance.now() - start });
       
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -179,6 +208,7 @@ export class FirestoreService {
     orderByField?: string,
     orderDirection: 'asc' | 'desc' = 'desc'
   ): Promise<T[]> {
+    const start = performance.now();
     try {
       let queryConstraints: any[] = [where(field, operator, value)];
 
@@ -188,6 +218,7 @@ export class FirestoreService {
 
       const q = query(collection(db, collectionName), ...queryConstraints);
       const querySnapshot = await getDocs(q);
+      firestorePerf.log({ type: 'getDocs', collection: collectionName, count: querySnapshot.size, ms: performance.now() - start });
       
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -321,7 +352,12 @@ export class UserService extends FirestoreService {
   }
 
   static async getUserById(id: string): Promise<User | null> {
-    return this.getById<User>(COLLECTIONS.USERS, id);
+    // Cache individual user docs to avoid repeated reads in the same session
+    return queryCache.get<User | null>(
+      `users:id:${id}`,
+      async () => this.getById<User>(COLLECTIONS.USERS, id),
+      5 * 60 * 1000 // 5 minutes
+    );
   }
 
   static async getUserByEmail(email: string): Promise<User | null> {
@@ -346,16 +382,21 @@ export class UserService extends FirestoreService {
   }
 
   static async getStudentsByMentor(mentorId: string): Promise<User[]> {
-    const q = query(
-      collection(db, COLLECTIONS.USERS),
-      where('mentor_id', '==', mentorId)
+    return queryCache.get<User[]>(
+      `users:mentor:${mentorId}`,
+      async () => {
+        const q = query(
+          collection(db, COLLECTIONS.USERS),
+          where('mentor_id', '==', mentorId)
+        );
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...convertTimestampsToDates(doc.data())
+        })) as User[];
+      },
+      5 * 60 * 1000
     );
-    
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...convertTimestampsToDates(doc.data())
-    })) as User[];
   }
 
   // For student-mentors - same implementation as getStudentsByMentor
@@ -390,7 +431,11 @@ export class UserService extends FirestoreService {
 
   static async getUsersByHouse(house: string): Promise<User[]> {
     try {
-      return await this.getWhere<User>(COLLECTIONS.USERS, 'house', '==', house);
+      return await queryCache.get<User[]>(
+        `users:house:${house}`,
+        async () => this.getWhere<User>(COLLECTIONS.USERS, 'house', '==', house),
+        5 * 60 * 1000
+      );
     } catch (error) {
       console.error('Error fetching users by house:', error);
       throw error;
@@ -399,7 +444,11 @@ export class UserService extends FirestoreService {
 
   static async getUsersByCampus(campus: string): Promise<User[]> {
     try {
-      return await this.getWhere<User>(COLLECTIONS.USERS, 'campus', '==', campus);
+      return await queryCache.get<User[]>(
+        `users:campus:${campus}`,
+        async () => this.getWhere<User>(COLLECTIONS.USERS, 'campus', '==', campus),
+        5 * 60 * 1000
+      );
     } catch (error) {
       console.error('Error fetching users by campus:', error);
       throw error;

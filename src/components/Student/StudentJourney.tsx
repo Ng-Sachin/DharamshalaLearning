@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { FirestoreService, COLLECTIONS } from '../../services/firestore';
-import { PhaseService, TopicService, PhaseTimelineService } from '../../services/dataServices';
-import { Phase, Topic, DailyGoal, User } from '../../types';
+import { PhaseService, TopicService, PhaseTimelineService, GoalService } from '../../services/dataServices';
+import { Phase, Topic, User } from '../../types';
 import { UserSelector } from '../Common/UserSelector';
 import { CampusFilter } from '../Common/CampusFilter';
 import type { Campus } from '../Common/CampusFilter';
@@ -215,12 +215,8 @@ const StudentJourney: React.FC = () => {
         value: targetUserId
       });
       
-      const userGoals = await FirestoreService.getWhere<DailyGoal>(
-        COLLECTIONS.DAILY_GOALS,
-        'student_id',
-        '==',
-        targetUserId
-      );
+      // Use cached GoalService (avoids duplicate Firestore queries & supports coalescing)
+      const userGoals = await GoalService.getGoalsByStudent(targetUserId);
       console.log('Loaded user goals:', userGoals);
 
       // Get phase timeline data for expected days
@@ -253,16 +249,8 @@ const StudentJourney: React.FC = () => {
             if (sortedGoals.length > 0) {
               const lastGoalDate = new Date(sortedGoals[sortedGoals.length - 1].created_at);
 
-              // Get goals from next phase
-              const nextPhaseGoals = await FirestoreService.getWhere<DailyGoal>(
-                COLLECTIONS.DAILY_GOALS,
-                'student_id',
-                '==',
-                userData?.id
-              );
-
-              // Filter goals from the next phase and check if there's at least one goal
-              const nextPhaseFirstGoal = nextPhaseGoals
+              // Filter goals from the next phase (already in userGoals list)
+              const nextPhaseFirstGoal = userGoals
                 .filter(g => g.phase_id === phases[phase.order].id) // next phase
                 .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
 
@@ -373,9 +361,13 @@ const StudentJourney: React.FC = () => {
     }
   }, [userData, selectedUserId]);
 
+  const lastLoadedRef = useRef<string | null>(null);
   useEffect(() => {
+    const key = `${selectedUserId || userData?.id}`;
+    if (lastLoadedRef.current === key) return; // prevent StrictMode double invoke
+    lastLoadedRef.current = key;
     loadJourneyData();
-  }, [loadJourneyData, selectedUserId]);
+  }, [loadJourneyData, selectedUserId, userData?.id]);
 
   if (loading) {
     return (
