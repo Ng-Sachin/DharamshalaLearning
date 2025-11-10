@@ -1,8 +1,17 @@
 {
-  "generatedAt": "2025-11-10T02:55:27.677Z",
+  "generatedAt": "2025-11-10T03:13:01.705Z",
   "version": "0.1.0",
   "features": {
     "all": [
+      {
+        "id": "feature-f143525b",
+        "title": "Add context-aware review system - mentor vs mentee detection",
+        "description": "Add context-aware review system - mentor vs mentee detection",
+        "status": "released",
+        "dateAdded": "2025-11-10",
+        "commitHash": "f143525b09d51ed3306931b009ebef19034891ab",
+        "author": "Mubin"
+      },
       {
         "id": "feature-89aecefb",
         "title": "Optimize dashboard and improve UX",
@@ -159,6 +168,15 @@
       }
     ],
     "released": [
+      {
+        "id": "feature-f143525b",
+        "title": "Add context-aware review system - mentor vs mentee detection",
+        "description": "Add context-aware review system - mentor vs mentee detection",
+        "status": "released",
+        "dateAdded": "2025-11-10",
+        "commitHash": "f143525b09d51ed3306931b009ebef19034891ab",
+        "author": "Mubin"
+      },
       {
         "id": "feature-89aecefb",
         "title": "Optimize dashboard and improve UX",

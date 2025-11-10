@@ -376,7 +376,8 @@ const MentorDashboard: React.FC = () => {
           }))
         }
         onNavigateToReview={(userId) => {
-          navigate(`/mentee-review/${userId}`);
+          // Navigate to unified review flow
+          navigate(`/mentor/mentee/${userId}`);
         }}
         isDismissible={true}
       />
@@ -492,7 +493,8 @@ const MentorDashboard: React.FC = () => {
         }))}
         toReviewTitle="Review My Mentees"
         onSubmitReview={(userId) => {
-          navigate(`/mentee-review/${userId}`);
+          // Navigate to unified review flow - shows history then "Review Now" button
+          navigate(`/mentor/mentee/${userId}`);
         }}
       />
 
@@ -735,13 +737,13 @@ const MentorDashboard: React.FC = () => {
                       <ArrowRight className="h-4 w-4 ml-1" />
                     </button>
                     <button
-                      onClick={() => navigate(`/mentor/mentee/${overview.student.id}?tab=review`)}
+                      onClick={() => navigate(`/mentor/mentee/${overview.student.id}`)}
                       className={`px-3 py-2 text-sm rounded transition-colors ${
                         overview.weekly_review_status === 'completed'
                           ? 'bg-green-100 text-green-700 hover:bg-green-200'
                           : 'bg-purple-600 text-white hover:bg-purple-700'
                       }`}
-                      title={overview.weekly_review_status === 'completed' ? 'Update Review' : 'Add Review'}
+                      title={overview.weekly_review_status === 'completed' ? 'View & Update Review' : 'View & Add Review'}
                     >
                       <Star className="h-4 w-4" />
                     </button>

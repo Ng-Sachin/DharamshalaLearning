@@ -592,14 +592,9 @@ const StudentDashboard: React.FC = () => {
           ]}
           toReviewTitle={myMentees.length > 0 ? "Review Mentor & Mentees" : "Review Your Mentor"}
           onSubmitReview={(userId) => {
-            // Check if it's mentor or mentee
-            if (userId === mentorData?.id) {
-              setShowMentorReviewModal(true);
-            } else {
-              setSelectedMenteeId(userId);
-              // Navigate to mentee review page
-              navigate(`/mentor/mentee/${userId}?tab=review`);
-            }
+            // Navigate to person's history page
+            // The page will show their history and a "Review Now" button
+            navigate(`/mentor/mentee/${userId}`);
           }}
         />
 

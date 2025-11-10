@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModal } from '../../hooks/useModal';
 import { GoalService, ReflectionService, PhaseService, TopicService, MenteeReviewService, MentorReviewService } from '../../services/dataServices';
@@ -33,7 +33,6 @@ interface ReviewItem {
 const MentorMenteeReview: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { userData } = useAuth();
   
   const [student, setStudent] = useState<User | null>(null);
@@ -164,14 +163,6 @@ const MentorMenteeReview: React.FC = () => {
       loadStudentData();
     }
   }, [studentId, loadStudentData]);
-
-  // Check for tab parameter to auto-open review modal
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'review' && student) {
-      setShowReviewModal(true);
-    }
-  }, [searchParams, student]);
 
   const openFeedbackPanel = (item: ReviewItem) => {
     setSelectedItem(item);
@@ -480,6 +471,23 @@ const MentorMenteeReview: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Prominent Review Now Button */}
+        <div className="mb-8">
+          <button
+            onClick={() => setShowReviewModal(true)}
+            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-6 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 flex items-center justify-center space-x-3 text-xl font-bold"
+          >
+            <Star className="h-8 w-8" />
+            <span>Review {isReviewingMentor ? student.name : student.name} Now</span>
+            <Award className="h-8 w-8" />
+          </button>
+          <p className="text-center text-sm text-gray-500 mt-3">
+            {isReviewingMentor 
+              ? "Rate your mentor's performance across 6 criteria including mentorship quality" 
+              : "Rate your mentee's performance across 5 key criteria"}
+          </p>
+        </div>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
