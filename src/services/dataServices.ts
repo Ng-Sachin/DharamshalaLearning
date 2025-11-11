@@ -282,11 +282,28 @@ export class GoalService extends FirestoreService {
         throw new Error('Reviewer not found');
       }
 
+      console.log('🔍 Checking goal review permissions:', {
+        reviewerId: reviewer.id,
+        reviewerName: reviewer.name,
+        reviewerRole: reviewer.role,
+        isAdmin: reviewer.isAdmin,
+        campus: reviewer.campus,
+        goalId: goal.id,
+        studentId: goal.student_id
+      });
+
       // Check permissions
       const hasPermission = await canReviewGoal(reviewer, goal);
       if (!hasPermission) {
+        console.error('❌ Permission denied for goal review:', {
+          reviewerId: reviewer.id,
+          reviewerRole: reviewer.role,
+          goalStudentId: goal.student_id
+        });
         throw new Error('You do not have permission to review this goal');
       }
+
+      console.log('✅ Permission granted for goal review');
 
       return await this.updateGoal(id, {
         status,
@@ -424,11 +441,28 @@ export class ReflectionService extends FirestoreService {
         throw new Error('Reviewer not found');
       }
 
+      console.log('🔍 Checking reflection review permissions:', {
+        reviewerId: reviewer.id,
+        reviewerName: reviewer.name,
+        reviewerRole: reviewer.role,
+        isAdmin: reviewer.isAdmin,
+        campus: reviewer.campus,
+        reflectionId: reflection.id,
+        studentId: reflection.student_id
+      });
+
       // Check permissions
       const hasPermission = await canReviewReflection(reviewer, reflection);
       if (!hasPermission) {
+        console.error('❌ Permission denied for reflection review:', {
+          reviewerId: reviewer.id,
+          reviewerRole: reviewer.role,
+          reflectionStudentId: reflection.student_id
+        });
         throw new Error('You do not have permission to review this reflection');
       }
+
+      console.log('✅ Permission granted for reflection review');
 
       const updateData: Partial<DailyReflection> = {
         status,

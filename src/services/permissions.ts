@@ -25,14 +25,21 @@ export async function canReviewGoal(user: User, goal: DailyGoal): Promise<boolea
   }
 
   // Admin can review anything
-  if (user.isAdmin) {
+  if (user.isAdmin || user.role === 'admin') {
+    console.log('✅ Admin permission granted for goal review');
     return true;
   }
 
   // Academic Associate can review goals from their entire campus
   if (user.role === 'academic_associate' && user.campus) {
     const student = await UserService.getUserById(goal.student_id);
-    return !!student && student.campus === user.campus;
+    const hasPermission = !!student && student.campus === user.campus;
+    console.log('🏫 Academic Associate check:', {
+      userCampus: user.campus,
+      studentCampus: student?.campus,
+      hasPermission
+    });
+    return hasPermission;
   }
 
   // Super Mentor / Mentor can review goals from their assigned mentees
@@ -58,14 +65,21 @@ export async function canReviewReflection(user: User, reflection: DailyReflectio
   }
 
   // Admin can review anything
-  if (user.isAdmin) {
+  if (user.isAdmin || user.role === 'admin') {
+    console.log('✅ Admin permission granted for reflection review');
     return true;
   }
 
   // Academic Associate can review reflections from their entire campus
   if (user.role === 'academic_associate' && user.campus) {
     const student = await UserService.getUserById(reflection.student_id);
-    return !!student && student.campus === user.campus;
+    const hasPermission = !!student && student.campus === user.campus;
+    console.log('🏫 Academic Associate check (reflection):', {
+      userCampus: user.campus,
+      studentCampus: student?.campus,
+      hasPermission
+    });
+    return hasPermission;
   }
 
   // Super Mentor / Mentor can review reflections from their assigned mentees

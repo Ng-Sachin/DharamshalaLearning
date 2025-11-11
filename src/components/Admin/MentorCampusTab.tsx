@@ -148,20 +148,46 @@ const handleGoalApproval = async (goalId: string, status: 'approved' | 'reviewed
       setErrorMessage('');
       setSuccessMessage('');
       
-      console.log('🎯 Approving goal:', goalId, 'with status:', status);
+      console.log('🎯 Approving goal:', goalId, 'with status:', status, 'by user:', userData?.id);
       await GoalService.reviewGoal(goalId, userData?.id || 'admin', status);
+      
+      // Optimistically update the UI immediately
+      setUserGoals(prev => prev.map(goal => 
+        goal.id === goalId 
+          ? { ...goal, status, reviewed_by: userData?.id || 'admin', reviewed_at: new Date() }
+          : goal
+      ));
+
+      // Update campus data as well
+      setCampusData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          goals: prev.goals.map(goal =>
+            goal.id === goalId
+              ? { ...goal, status, reviewed_by: userData?.id || 'admin', reviewed_at: new Date() }
+              : goal
+          )
+        };
+      });
       
       setSuccessMessage(`Goal ${status === 'approved' ? 'approved' : 'reviewed'} successfully! ✅`);
       
-      // Refresh user data
-      if (selectedUser) {
-        await selectUser(selectedUser);
-      }
-      // Also refresh campus overview
-      fetchCampusData(true);
+      // Refresh in background to ensure sync
+      setTimeout(() => {
+        if (selectedUser) {
+          selectUser(selectedUser);
+        }
+        fetchCampusData(true);
+      }, 500);
     } catch (error: any) {
       console.error('❌ Error approving goal:', error);
       setErrorMessage(error.message || 'Failed to approve goal. Please try again.');
+      
+      // Revert optimistic update on error
+      if (selectedUser) {
+        await selectUser(selectedUser);
+      }
     } finally {
       setProcessing(null);
     }
@@ -173,20 +199,46 @@ const handleGoalApproval = async (goalId: string, status: 'approved' | 'reviewed
       setErrorMessage('');
       setSuccessMessage('');
       
-      console.log('💭 Approving reflection:', reflectionId, 'with status:', status);
+      console.log('💭 Approving reflection:', reflectionId, 'with status:', status, 'by user:', userData?.id);
       await ReflectionService.reviewReflection(reflectionId, userData?.id || 'admin', status);
+      
+      // Optimistically update the UI immediately
+      setUserReflections(prev => prev.map(reflection => 
+        reflection.id === reflectionId 
+          ? { ...reflection, status, reviewed_by: userData?.id || 'admin', reviewed_at: new Date() }
+          : reflection
+      ));
+
+      // Update campus data as well
+      setCampusData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          reflections: prev.reflections.map(reflection =>
+            reflection.id === reflectionId
+              ? { ...reflection, status, reviewed_by: userData?.id || 'admin', reviewed_at: new Date() }
+              : reflection
+          )
+        };
+      });
       
       setSuccessMessage(`Reflection ${status === 'approved' ? 'approved' : 'reviewed'} successfully! ✅`);
       
-      // Refresh user data
-      if (selectedUser) {
-        await selectUser(selectedUser);
-      }
-      // Also refresh campus overview
-      fetchCampusData(true);
+      // Refresh in background to ensure sync
+      setTimeout(() => {
+        if (selectedUser) {
+          selectUser(selectedUser);
+        }
+        fetchCampusData(true);
+      }, 500);
     } catch (error: any) {
       console.error('❌ Error approving reflection:', error);
       setErrorMessage(error.message || 'Failed to approve reflection. Please try again.');
+      
+      // Revert optimistic update on error
+      if (selectedUser) {
+        await selectUser(selectedUser);
+      }
     } finally {
       setProcessing(null);
     }
