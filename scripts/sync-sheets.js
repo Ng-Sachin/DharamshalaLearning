@@ -10,20 +10,57 @@
 const admin = require('firebase-admin');
 const { google } = require('googleapis');
 
-// Initialize Firebase Admin
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+// Validate environment variables
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+  console.error('❌ FIREBASE_SERVICE_ACCOUNT environment variable is not set');
+  process.exit(1);
+}
 
+if (!process.env.GOOGLE_SERVICE_ACCOUNT) {
+  console.error('❌ GOOGLE_SERVICE_ACCOUNT environment variable is not set');
+  process.exit(1);
+}
+
+if (!process.env.GOOGLE_SHEETS_ID) {
+  console.error('❌ GOOGLE_SHEETS_ID environment variable is not set');
+  process.exit(1);
+}
+
+// Parse service accounts with error handling
+let serviceAccount;
+let googleCredentials;
+
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  console.log('✅ Firebase service account parsed successfully');
+} catch (error) {
+  console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT:', error.message);
+  console.error('First 50 chars:', process.env.FIREBASE_SERVICE_ACCOUNT?.substring(0, 50));
+  process.exit(1);
+}
+
+try {
+  googleCredentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+  console.log('✅ Google service account parsed successfully');
+} catch (error) {
+  console.error('❌ Failed to parse GOOGLE_SERVICE_ACCOUNT:', error.message);
+  console.error('First 50 chars:', process.env.GOOGLE_SERVICE_ACCOUNT?.substring(0, 50));
+  process.exit(1);
+}
+
+// Initialize Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
+  console.log('✅ Firebase Admin initialized');
 }
 
 const db = admin.firestore();
 
 // Google Sheets configuration
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID;
-const googleCredentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT || '{}');
+console.log('✅ Using Google Sheets ID:', SPREADSHEET_ID);
 
 /**
  * Get Google Sheets client

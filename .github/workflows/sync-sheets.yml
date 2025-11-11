@@ -31,33 +31,8 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: node scripts/sync-sheets.js
       
-      - name: Send Discord notification on success
-        if: success()
-        continue-on-error: true
-        env:
-          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          if [ -n "$WEBHOOK_URL" ]; then
-            curl -X POST "$WEBHOOK_URL" \
-              -H "Content-Type: application/json" \
-              -d '{"embeds":[{"title":"✅ Google Sheets Sync Complete","description":"Daily sync completed successfully!","color":65280,"timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%S)"'","footer":{"text":"Campus Learning Dashboard - GitHub Actions"}}]}'
-          else
-            echo "Discord webhook not configured, skipping notification"
-          fi
-      
-      - name: Send Discord notification on failure
-        if: failure()
-        continue-on-error: true
-        env:
-          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          if [ -n "$WEBHOOK_URL" ]; then
-            curl -X POST "$WEBHOOK_URL" \
-              -H "Content-Type: application/json" \
-              -d '{"embeds":[{"title":"❌ Google Sheets Sync Failed","description":"Daily sync encountered an error. Check GitHub Actions logs.","color":16711680,"timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%S)"'","footer":{"text":"Campus Learning Dashboard - GitHub Actions"}}]}'
-          else
-            echo "Discord webhook not configured, skipping notification"
-          fi
+      # Note: Discord webhook is used for attendance/login notifications in the app
+      # Not used for workflow success/failure notifications
+
