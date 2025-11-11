@@ -1,8 +1,17 @@
 {
-  "generatedAt": "2025-11-11T03:03:34.457Z",
+  "generatedAt": "2025-11-11T03:25:59.604Z",
   "version": "0.1.0",
   "features": {
     "all": [
+      {
+        "id": "feature-055de468",
+        "title": "Add dedicated Reviews page with UI improvements and fix permission issues",
+        "description": "Add dedicated Reviews page with UI improvements and fix permission issues",
+        "status": "released",
+        "dateAdded": "2025-11-11",
+        "commitHash": "055de4683514c4983380206d1a2d16a1093e4f9d",
+        "author": "Mubin"
+      },
       {
         "id": "feature-81cb6c5e",
         "title": "Simplify review flow - unified path from home dashboard",
@@ -177,6 +186,15 @@
       }
     ],
     "released": [
+      {
+        "id": "feature-055de468",
+        "title": "Add dedicated Reviews page with UI improvements and fix permission issues",
+        "description": "Add dedicated Reviews page with UI improvements and fix permission issues",
+        "status": "released",
+        "dateAdded": "2025-11-11",
+        "commitHash": "055de4683514c4983380206d1a2d16a1093e4f9d",
+        "author": "Mubin"
+      },
       {
         "id": "feature-81cb6c5e",
         "title": "Simplify review flow - unified path from home dashboard",

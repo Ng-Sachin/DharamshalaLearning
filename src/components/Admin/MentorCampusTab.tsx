@@ -50,13 +50,31 @@ const MentorCampusTab: React.FC<{ campusId: string }> = ({ campusId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'goals' | 'reflections' | 'no_goals_today'>('all');
   const [page, setPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userGoals, setUserGoals] = useState<DailyGoal[]>([]);
   const [userReflections, setUserReflections] = useState<DailyReflection[]>([]);
   const [userLoading, setUserLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [processing, setProcessing] = useState<string | null>(null);
 
   // Debounce search term
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Auto-clear messages after 3 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(''), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   const fetchCampusData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
@@ -124,31 +142,53 @@ const canApprove = (studentId: string) => {
     return false;
   };
 
-  const handleGoalApproval = async (goalId: string, status: 'approved' | 'reviewed') => {
+const handleGoalApproval = async (goalId: string, status: 'approved' | 'reviewed') => {
     try {
+      setProcessing(goalId);
+      setErrorMessage('');
+      setSuccessMessage('');
+      
+      console.log('🎯 Approving goal:', goalId, 'with status:', status);
       await GoalService.reviewGoal(goalId, userData?.id || 'admin', status);
+      
+      setSuccessMessage(`Goal ${status === 'approved' ? 'approved' : 'reviewed'} successfully! ✅`);
+      
       // Refresh user data
       if (selectedUser) {
         await selectUser(selectedUser);
       }
       // Also refresh campus overview
       fetchCampusData(true);
-    } catch (error) {
-      console.error('Error approving goal:', error);
+    } catch (error: any) {
+      console.error('❌ Error approving goal:', error);
+      setErrorMessage(error.message || 'Failed to approve goal. Please try again.');
+    } finally {
+      setProcessing(null);
     }
   };
 
   const handleReflectionApproval = async (reflectionId: string, status: 'approved' | 'reviewed') => {
     try {
+      setProcessing(reflectionId);
+      setErrorMessage('');
+      setSuccessMessage('');
+      
+      console.log('💭 Approving reflection:', reflectionId, 'with status:', status);
       await ReflectionService.reviewReflection(reflectionId, userData?.id || 'admin', status);
+      
+      setSuccessMessage(`Reflection ${status === 'approved' ? 'approved' : 'reviewed'} successfully! ✅`);
+      
       // Refresh user data
       if (selectedUser) {
         await selectUser(selectedUser);
       }
       // Also refresh campus overview
       fetchCampusData(true);
-    } catch (error) {
-      console.error('Error approving reflection:', error);
+    } catch (error: any) {
+      console.error('❌ Error approving reflection:', error);
+      setErrorMessage(error.message || 'Failed to approve reflection. Please try again.');
+    } finally {
+      setProcessing(null);
     }
   };
 
@@ -264,6 +304,29 @@ const canApprove = (studentId: string) => {
             </button>
           </div>
 
+          {/* Notification Banners */}
+          {successMessage && (
+            <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-lg shadow-sm animate-fade-in">
+              <div className="flex items-start">
+                <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 mr-3 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-800">{successMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {errorMessage && (
+            <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm animate-fade-in">
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800">{errorMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {userLoading ? (
             <div className="space-y-4">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -339,17 +402,45 @@ const canApprove = (studentId: string) => {
                                 <div className="flex flex-col sm:flex-row gap-2">
                                   <button
                                     onClick={() => handleGoalApproval(goal.id, 'approved')}
-                                    className="flex items-center justify-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                                    disabled={processing === goal.id}
+                                    className={`flex items-center justify-center space-x-1 px-3 py-1 text-white text-sm rounded transition-colors ${
+                                      processing === goal.id
+                                        ? 'bg-green-400 cursor-not-allowed'
+                                        : 'bg-green-600 hover:bg-green-700'
+                                    }`}
                                   >
-                                    <CheckCircle className="h-4 w-4" />
-                                    <span>Approve</span>
+                                    {processing === goal.id ? (
+                                      <>
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        <span>Processing...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="h-4 w-4" />
+                                        <span>Approve</span>
+                                      </>
+                                    )}
                                   </button>
                                   <button
                                     onClick={() => handleGoalApproval(goal.id, 'reviewed')}
-                                    className="flex items-center justify-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                    disabled={processing === goal.id}
+                                    className={`flex items-center justify-center space-x-1 px-3 py-1 text-white text-sm rounded transition-colors ${
+                                      processing === goal.id
+                                        ? 'bg-blue-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700'
+                                    }`}
                                   >
-                                    <Eye className="h-4 w-4" />
-                                    <span>Review</span>
+                                    {processing === goal.id ? (
+                                      <>
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        <span>Processing...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="h-4 w-4" />
+                                        <span>Review</span>
+                                      </>
+                                    )}
                                   </button>
                                 </div>
                               )}
@@ -397,17 +488,45 @@ const canApprove = (studentId: string) => {
                                 <div className="flex flex-col sm:flex-row gap-2">
                                   <button
                                     onClick={() => handleReflectionApproval(reflection.id, 'approved')}
-                                    className="flex items-center justify-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                                    disabled={processing === reflection.id}
+                                    className={`flex items-center justify-center space-x-1 px-3 py-1 text-white text-sm rounded transition-colors ${
+                                      processing === reflection.id
+                                        ? 'bg-green-400 cursor-not-allowed'
+                                        : 'bg-green-600 hover:bg-green-700'
+                                    }`}
                                   >
-                                    <CheckCircle className="h-4 w-4" />
-                                    <span>Approve</span>
+                                    {processing === reflection.id ? (
+                                      <>
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        <span>Processing...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="h-4 w-4" />
+                                        <span>Approve</span>
+                                      </>
+                                    )}
                                   </button>
                                   <button
                                     onClick={() => handleReflectionApproval(reflection.id, 'reviewed')}
-                                    className="flex items-center justify-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                    disabled={processing === reflection.id}
+                                    className={`flex items-center justify-center space-x-1 px-3 py-1 text-white text-sm rounded transition-colors ${
+                                      processing === reflection.id
+                                        ? 'bg-blue-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700'
+                                    }`}
                                   >
-                                    <Eye className="h-4 w-4" />
-                                    <span>Review</span>
+                                    {processing === reflection.id ? (
+                                      <>
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        <span>Processing...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="h-4 w-4" />
+                                        <span>Review</span>
+                                      </>
+                                    )}
                                   </button>
                                 </div>
                               )}
