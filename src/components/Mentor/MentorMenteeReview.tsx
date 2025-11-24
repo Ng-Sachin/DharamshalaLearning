@@ -526,7 +526,7 @@ const MentorMenteeReview: React.FC = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -587,7 +587,7 @@ const MentorMenteeReview: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap">
               <div className="flex items-center">
                 <div className="p-2 bg-purple-100 rounded-lg">
                   <Star className="h-6 w-6 text-purple-600" />
@@ -634,7 +634,7 @@ const MentorMenteeReview: React.FC = () => {
         {/* Filter Tabs */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+            <nav className="flex space-x-8 px-6 flex-wrap" aria-label="Tabs">
               {(['all', 'pending', 'reviewed', 'approved'] as const).map((status) => (
                 <button
                   key={status}
@@ -678,11 +678,11 @@ const MentorMenteeReview: React.FC = () => {
               <div key={item.goal.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                 {/* Item Header */}
                 <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                  <div className="flex items-center justify-between flex-wrap">
+                    <div className="flex items-center flex-wrap space-x-4">
                       <div className="flex items-center space-x-2">
                         <Calendar className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm font-medium text-gray-900 mb-3">
                           {new Date(item.goal.created_at).toLocaleDateString('en-US', { 
                             weekday: 'short', 
                             year: 'numeric', 
@@ -692,12 +692,12 @@ const MentorMenteeReview: React.FC = () => {
                         </span>
                       </div>
                       {item.phase && (
-                        <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded">
+                        <span className="px-2 py-1 my-2 bg-blue-50 text-blue-700 text-xs font-medium rounded">
                           {item.phase.name}
                         </span>
                       )}
                       {item.topic && (
-                        <span className="px-2 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded">
+                        <span className="px-2 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded mb-3">
                           {item.topic.name}
                         </span>
                       )}
@@ -756,7 +756,7 @@ const MentorMenteeReview: React.FC = () => {
                   <div className="p-6 bg-gray-50">
                     {item.reflection ? (
                       <>
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center flex-wrap justify-between mb-4">
                           <div className="flex items-center space-x-2">
                             <MessageSquare className="h-5 w-5 text-purple-600" />
                             <h3 className="text-lg font-semibold text-gray-900">Reflection</h3>

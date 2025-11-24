@@ -41,8 +41,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main content - with padding for top nav (desktop) and bottom nav (mobile) */}
       <main className="pb-20 md:pb-6 pt-16 md:pt-0">
         <div className="py-4 sm:py-6">
-          <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
-            {children}
+          {/* table-container allows wide content (tables/charts) to scroll on small screens */}
+          <div className="table-container">
+            <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+              {children}
+            </div>
           </div>
         </div>
       </main>

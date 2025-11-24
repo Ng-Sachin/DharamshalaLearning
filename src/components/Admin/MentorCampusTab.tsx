@@ -271,11 +271,17 @@ const handleGoalApproval = async (goalId: string, status: 'approved' | 'reviewed
   const filteredStudents = useMemo(() => {
     if (!campusData) return [];
     let students = campusData.students;
+
+    // Show all users regardless of status
+    // No filtering based on user status (active/inactive/dropout/etc.)
+
     if (debouncedSearchTerm) {
       const term = debouncedSearchTerm.toLowerCase();
-      students = students.filter(
-        s => s.name?.toLowerCase().includes(term) || s.email?.toLowerCase().includes(term)
-      );
+      students = students.filter(s => {
+        const name = (s?.name || '').toString().toLowerCase();
+        const email = (s?.email || '').toString().toLowerCase();
+        return name.includes(term) || email.includes(term);
+      });
     }
     if (filter === 'goals') {
       const studentIds = campusData.goals.filter(g => g.status === 'pending').map(g => g.student_id);
@@ -321,6 +327,25 @@ const handleGoalApproval = async (goalId: string, status: 'approved' | 'reviewed
 
     return students;
   }, [campusData, debouncedSearchTerm, filter]);
+
+  // Reset to first page when search or filter changes so pagination doesn't hide results
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm, filter]);
+
+  // Debugging: log counts to help reproduce empty-search issues in the wild
+  useEffect(() => {
+    if (!campusData) return;
+    try {
+      const total = campusData.students.length;
+      const term = debouncedSearchTerm || '';
+      const matched = filteredStudents.length;
+      const sample = filteredStudents.slice(0, 5).map(s => s.name || s.email || s.id);
+      console.debug('MentorCampusTab: search debug', { campusId, term, total, matched, sample });
+    } catch (err) {
+      // swallow debug errors
+    }
+  }, [campusData, debouncedSearchTerm, filteredStudents, campusId]);
 
   // Pagination
   const paginatedStudents = useMemo(() => {
@@ -721,7 +746,7 @@ const handleGoalApproval = async (goalId: string, status: 'approved' | 'reviewed
                   const hasPendingItems = pendingGoals.length > 0 || pendingReflections.length > 0;
 
                   return (
-                    <div key={student.id} className={`bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer border-l-4 ${
+                    <div key={student.id} className={`bg-white rounded-lg shadow p-3 md:py-3 md:px-1 hover:shadow-md transition-shadow cursor-pointer border-l-4 ${
                       hasPendingItems ? 'border-l-yellow-400 bg-yellow-50' : 'border-l-gray-200'
                     }`} onClick={() => selectUser(student)}>
                       <div className="flex items-center justify-between mb-2">
@@ -729,6 +754,11 @@ const handleGoalApproval = async (goalId: string, status: 'approved' | 'reviewed
                         <ChevronDown className="h-5 w-5 text-gray-400" />
                       </div>
                       <div className="text-sm text-gray-600 mb-2">{student.email}</div>
+                      {student.status && student.status !== 'active' && (
+                        <div className="inline-block px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 mb-2">
+                          Status: {student.status}
+                        </div>
+                      )}
                       <div className="flex items-center space-x-4 text-sm mb-2">
                         <span className={`flex items-center space-x-1 ${
                           pendingGoals.length > 0 ? 'text-yellow-700 font-medium' : 'text-gray-600'

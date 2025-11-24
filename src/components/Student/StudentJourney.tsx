@@ -462,15 +462,15 @@ const StudentJourney: React.FC = () => {
       )}
 
       {/* Main Journey Card */}
-      <div className="bg-white rounded-xl shadow-xl p-8 mb-8">
+      <div className="bg-white rounded-xl shadow-xl p-4 mb-8">
         {/* Student Info Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{selectedUserData?.name || userData?.name}</h2>
-              <p className="text-gray-600">Student ID: {selectedUserData?.id || userData?.id}</p>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
+            <div className="min-w-0">
+              <h2 className="text-2xl font-bold text-gray-900 truncate">{selectedUserData?.name || userData?.name}</h2>
+              <p className="text-gray-600 text-sm truncate">Student ID: <span className="font-mono break-words flex flex-wrap">{selectedUserData?.id || userData?.id}</span></p>
             </div>
-            <div className="text-right">
+            <div className="text-right mt-4 sm:mt-0 flex-shrink-0">
               <div className="text-sm text-gray-500">Current Phase</div>
               <div className="text-lg font-semibold text-blue-600">
                 {selectedUserData?.current_phase_name || userData?.current_phase_name || 'Not Set'}
@@ -517,11 +517,11 @@ const StudentJourney: React.FC = () => {
         {/* Phase Duration Chart - Moved up after stats */}
         <div className="mb-8">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">Phase Duration Analysis</h3>
-          <div className="bg-gray-50 rounded-lg p-6">
+          <div className="bg-gray-50 rounded-lg p-4">
             <h4 className="text-lg font-medium text-gray-900 mb-4">
               Your Progress vs {(selectedUserData || userData)?.house} House Average
             </h4>
-            <div className="h-80">
+            <div className="h-64 sm:h-80">
               {combinedChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={combinedChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -589,7 +589,7 @@ const StudentJourney: React.FC = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex justify-center mt-6 space-x-6 text-sm">
+            <div className="flex flex-wrap justify-center mt-6 gap-4 text-sm">
               <div className="flex items-center">
                 <div className="w-6 h-4 bg-blue-500 rounded mr-2"></div>
                 <span>Phase Days (Bar)</span>
@@ -612,9 +612,9 @@ const StudentJourney: React.FC = () => {
           <div className="space-y-4">
             {phaseProgress.map((phaseData) => (
               <div key={phaseData.phase.id} className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
                   <h4 className="text-lg font-medium text-gray-900">{phaseData.phase.name}</h4>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 mt-3 sm:mt-0">
                     {phaseData.expectedDays && (
                       <span className="text-sm text-blue-600 font-medium">
                         Expected: {phaseData.expectedDays} days

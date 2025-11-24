@@ -257,14 +257,14 @@ const PairProgrammingDashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Pair Programming</h1>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold text-gray-900 truncate">Pair Programming</h1>
               <p className="text-gray-600 mt-1">Collaborate, learn, and grow together</p>
             </div>
             <button
               onClick={() => setShowRequestModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex-shrink-0"
             >
               <Plus className="h-4 w-4 mr-2" />
               Request Session
@@ -274,7 +274,7 @@ const PairProgrammingDashboard: React.FC = () => {
 
         {/* Navigation Tabs */}
         <div className="mb-8">
-          <nav className="flex space-x-8">
+          <nav className="flex flex-wrap gap-2">
             {[
               { id: 'overview', label: 'Overview', icon: TrendingUp },
               { id: 'sessions', label: 'My Sessions', icon: Users },
@@ -284,7 +284,7 @@ const PairProgrammingDashboard: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center px-1 py-2 border-b-2 font-medium text-sm ${
+                className={`w-full sm:w-auto text-center flex items-center justify-center sm:justify-start px-3 py-2 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -362,32 +362,32 @@ const PairProgrammingDashboard: React.FC = () => {
                 ) : (
                   <div className="space-y-4">
                     {dashboardData.todays_sessions.map((session) => (
-                      <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          {getStatusIcon(session.status)}
-                          <div>
-                            <p className="font-medium text-gray-900">{session.topic}</p>
-                            <p className="text-sm text-gray-600">
-                              {session.scheduled_time} • {userRole === 'mentee' ? 'Mentor' : 'Mentee'}: {session.mentor_id || session.student_id}
-                            </p>
+                          <div key={session.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-gray-200 rounded-lg">
+                            <div className="flex items-center space-x-4 min-w-0">
+                              {getStatusIcon(session.status)}
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 truncate">{session.topic}</p>
+                                <p className="text-sm text-gray-600 truncate">
+                                  {session.scheduled_time} • {userRole === 'mentee' ? 'Mentor' : 'Mentee'}: <span className="font-mono break-words">{session.mentor_id || session.student_id}</span>
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(session.status)}`}>
+                                {session.status}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setSelectedSession(session);
+                                  setShowSessionModal(true);
+                                }}
+                                className="text-primary-600 hover:text-primary-800 text-sm font-medium flex-shrink-0"
+                              >
+                                View
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(session.status)}`}>
-                            {session.status}
-                          </span>
-                          <button
-                            onClick={() => {
-                              setSelectedSession(session);
-                              setShowSessionModal(true);
-                            }}
-                            className="text-primary-600 hover:text-primary-800 text-sm font-medium"
-                          >
-                            View
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                        ))}
                   </div>
                 )}
               </div>
@@ -452,16 +452,16 @@ const PairProgrammingDashboard: React.FC = () => {
                     {dashboardData.upcoming_sessions.map((session) => (
                       <div
                         key={session.id}
-                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:shadow-sm transition-all"
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:shadow-sm transition-all"
                       >
-                        <div className="flex items-center space-x-4 flex-1">
+                        <div className="flex items-center space-x-4 flex-1 min-w-0">
                           {getStatusIcon(session.status)}
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{session.topic}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{session.topic}</p>
                             {session.description && (
-                              <p className="text-sm text-gray-600 mt-1">{session.description}</p>
+                              <p className="text-sm text-gray-600 mt-1 truncate">{session.description}</p>
                             )}
-                            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                            <div className="flex flex-wrap items-center space-x-4 mt-2 text-sm text-gray-500">
                               {session.scheduled_date && (
                                 <span className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
@@ -478,13 +478,13 @@ const PairProgrammingDashboard: React.FC = () => {
                                   {session.scheduled_time}
                                 </span>
                               )}
-                              <span>
-                                {userRole === 'mentee' ? 'Mentor' : 'Mentee'}: {session.mentor_id || session.student_id}
+                              <span className="truncate">
+                                {userRole === 'mentee' ? 'Mentor' : 'Mentee'}: <span className="font-mono break-words">{session.mentor_id || session.student_id}</span>
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-3 mt-3 sm:mt-0">
                           <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(session.status)}`}>
                             {session.status}
                           </span>
@@ -493,7 +493,7 @@ const PairProgrammingDashboard: React.FC = () => {
                               setSelectedSession(session);
                               setShowSessionModal(true);
                             }}
-                            className="text-primary-600 hover:text-primary-800 text-sm font-medium px-3 py-1 hover:bg-primary-50 rounded"
+                            className="text-primary-600 hover:text-primary-800 text-sm font-medium px-3 py-1 hover:bg-primary-50 rounded flex-shrink-0"
                           >
                             View Details
                           </button>

@@ -346,7 +346,7 @@ const MentorDashboard: React.FC = () => {
         {/* Header */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-6 py-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
                 <p className="mt-2 text-gray-600">Welcome back, {userData?.name}</p>

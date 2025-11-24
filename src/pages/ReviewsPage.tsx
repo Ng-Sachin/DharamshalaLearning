@@ -181,20 +181,20 @@ const ReviewsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="p-3 bg-white bg-opacity-20 rounded-lg">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+            <div className="p-3 bg-white bg-opacity-20 rounded-lg flex-shrink-0">
               <Star className="h-10 w-10" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold">Performance Reviews</h1>
+              <h1 className="text-3xl sm:text-4xl font-bold">Performance Reviews</h1>
               <p className="text-purple-100 mt-2">Review your mentor and mentees weekly</p>
             </div>
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div 
               onClick={() => setActiveTab('mentor')}
               className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-4 cursor-pointer hover:bg-opacity-20 transition-all hover:scale-105"
@@ -237,7 +237,7 @@ const ReviewsPage: React.FC = () => {
       </div>
 
       {/* Review Insights */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-9 mb-5">
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-lg shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <span className="text-2xl mr-2">📊</span>
@@ -347,7 +347,7 @@ const ReviewsPage: React.FC = () => {
                             className="flex items-center space-x-2 group cursor-pointer hover:bg-purple-100 hover:bg-opacity-50 rounded-lg p-1 transition-all"
                             title={`Review from ${formatWeekLabel(review.week_start)} - Score: ${score.toFixed(2)}/2.0`}
                           >
-                            <span className="text-xs text-gray-500 w-16 font-medium">
+                            <span className="text-xs text-gray-500 w-14 sm:w-16 font-medium">
                               {formatWeekLabel(review.week_start)}
                             </span>
                             <div className="flex-1 bg-gray-200 rounded-full h-6 shadow-inner">
@@ -403,7 +403,7 @@ const ReviewsPage: React.FC = () => {
                           className="flex items-center space-x-2 group cursor-pointer hover:bg-blue-100 hover:bg-opacity-50 rounded-lg p-1 transition-all"
                           title={`${mentee.name} - Latest Score: ${review ? score.toFixed(2) : 'Not reviewed yet'}`}
                         >
-                          <span className="text-xs text-gray-500 w-20 truncate font-medium" title={mentee.name}>
+                          <span className="text-xs text-gray-500 w-16 sm:w-20 truncate font-medium" title={mentee.name}>
                             {mentee.name.split(' ')[0]}
                           </span>
                           <div className="flex-1 bg-gray-200 rounded-full h-6 shadow-inner">
@@ -436,10 +436,10 @@ const ReviewsPage: React.FC = () => {
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow-sm border-b border-gray-200 rounded-t-lg">
-          <div className="flex space-x-8">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setActiveTab('mentor')}
-              className={`px-6 py-4 font-medium border-b-2 transition-colors ${
+              className={`w-full sm:w-auto text-center px-4 py-3 sm:px-6 sm:py-4 font-medium border-b-2 transition-colors ${
                 activeTab === 'mentor'
                   ? 'border-purple-600 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -455,7 +455,7 @@ const ReviewsPage: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('mentees')}
-              className={`px-6 py-4 font-medium border-b-2 transition-colors ${
+              className={`w-full sm:w-auto text-center px-4 py-3 sm:px-6 sm:py-4 font-medium border-b-2 transition-colors ${
                 activeTab === 'mentees'
                   ? 'border-purple-600 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -481,8 +481,8 @@ const ReviewsPage: React.FC = () => {
             <div>
 {mentorData ? (
                 <div className="bg-white rounded-lg shadow-sm border-l-4 border-purple-500 p-6 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                    <div className="flex items-start sm:items-center space-x-4 min-w-0">
                       <div className="relative w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
                         <span className="text-2xl font-bold text-purple-600">
                           {mentorData.name.charAt(0).toUpperCase()}
@@ -494,9 +494,9 @@ const ReviewsPage: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center space-x-2">
-                          <h3 className="text-xl font-semibold text-gray-900">{mentorData.name}</h3>
+                          <h3 className="text-xl font-semibold text-gray-900 truncate">{mentorData.name}</h3>
                           {/* Trend indicator */}
                           {getMentorTrend() === 'up' && (
                             <span className="text-green-600 text-xl" title="Performance improving">↗️</span>
@@ -505,7 +505,7 @@ const ReviewsPage: React.FC = () => {
                             <span className="text-orange-600 text-xl" title="Needs attention">↘️</span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600">{mentorData.email}</p>
+                        <p className="text-sm text-gray-600 truncate">{mentorData.email}</p>
                         <div className="flex items-center space-x-3 mt-2 flex-wrap gap-2">
                           {hasReviewedMentorThisWeek() ? (
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -549,7 +549,7 @@ const ReviewsPage: React.FC = () => {
                     </div>
                     <button
                       onClick={() => navigate(`/mentor/mentee/${mentorData.id}`)}
-                      className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center space-x-2 hover:scale-105 transform"
+                      className="mt-4 sm:mt-0 px-4 py-2 sm:px-6 sm:py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center space-x-2 hover:scale-105 transform flex-shrink-0"
                     >
                       <Star className="h-5 w-5" />
                       <span>Review Mentor</span>
@@ -572,7 +572,7 @@ const ReviewsPage: React.FC = () => {
                     Contact your admin to get paired with a mentor who matches your goals.
                   </p>
                   <button
-                    onClick={() => navigate('/student-dashboard')}
+                    onClick={() => navigate('/student/dashboard')}
                     className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all font-medium shadow-md hover:shadow-lg transform hover:scale-105"
                   >
                     Go to Dashboard
@@ -596,16 +596,16 @@ const ReviewsPage: React.FC = () => {
                         key={mentee.id}
                         className="bg-white rounded-lg shadow-sm border-l-4 border-indigo-500 p-6 hover:shadow-md transition-shadow"
                       >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="relative w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
+                          <div className="flex items-center space-x-3 min-w-0">
+                            <div className="relative w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
                               <span className="text-lg font-bold text-indigo-600">
                                 {mentee.name.charAt(0).toUpperCase()}
                               </span>
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <div className="flex items-center space-x-2">
-                                <h3 className="text-lg font-semibold text-gray-900">{mentee.name}</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 truncate">{mentee.name}</h3>
                                 {trend === 'up' && (
                                   <span className="text-green-600 text-lg" title="Performance improving">↗️</span>
                                 )}
@@ -613,12 +613,12 @@ const ReviewsPage: React.FC = () => {
                                   <span className="text-orange-600 text-lg" title="Needs attention">↘️</span>
                                 )}
                               </div>
-                              <p className="text-sm text-gray-600">{mentee.email}</p>
+                              <p className="text-sm text-gray-600 truncate">{mentee.email}</p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                           <div className="flex flex-col space-y-2">
                             {hasReviewed ? (
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -654,7 +654,7 @@ const ReviewsPage: React.FC = () => {
                           </div>
                           <button
                             onClick={() => navigate(`/mentor/mentee/${mentee.id}`)}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center space-x-2 hover:scale-105 transform"
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center space-x-2 hover:scale-105 transform flex-shrink-0"
                           >
                             <Star className="h-4 w-4" />
                             <span>Review</span>

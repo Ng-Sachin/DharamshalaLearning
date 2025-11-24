@@ -474,7 +474,7 @@ const GoalSetting: React.FC = () => {
           </div>
         )}
         <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-wrap">
             <div className="p-2 bg-primary-100 rounded-lg">
               <Target className="h-6 w-6 text-primary-600" />
             </div>

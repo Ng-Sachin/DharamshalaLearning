@@ -56,3 +56,38 @@ code {
 .animate-progress {
   animation: progress 1.5s ease-in-out infinite;
 }
+
+/* App-wide responsive helpers */
+@layer utilities {
+  /* Horizontal scrolling container for wide tables and charts */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+
+  .responsive-img {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Stack helpers: use on small screens to stack horizontal groups */
+  .stack-on-mobile {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  @media (max-width: 640px) {
+    .stack-on-mobile {
+      flex-direction: column;
+    }
+  }
+
+  /* Utility to clamp text to two lines */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

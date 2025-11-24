@@ -8,13 +8,16 @@ interface CampusJoiningDateModalProps {
   onClose: () => void;
   user: UserType;
   onDateUpdated: (updatedUser: UserType) => void;
+  // If true, require user to save a joining date before continuing (hide Skip/X)
+  requireFill?: boolean;
 }
 
 export default function CampusJoiningDateModal({
   isOpen,
   onClose,
   user,
-  onDateUpdated
+  onDateUpdated,
+  requireFill = false
 }: CampusJoiningDateModalProps) {
   const [joiningDate, setJoiningDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,12 +77,15 @@ export default function CampusJoiningDateModal({
             <Calendar className="h-6 w-6 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Welcome to Campus!</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          {/* Hide explicit close when the date is required */}
+          {!requireFill && (
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -113,15 +119,18 @@ export default function CampusJoiningDateModal({
             </div>
           )}
 
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-              disabled={isSubmitting}
-            >
-              Skip for Now
-            </button>
+            <div className="flex justify-end space-x-3">
+            {/* When requireFill is true, hide the Skip button to force save */}
+            {!requireFill && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                disabled={isSubmitting}
+              >
+                Skip for Now
+              </button>
+            )}
             <button
               type="submit"
               disabled={isSubmitting}

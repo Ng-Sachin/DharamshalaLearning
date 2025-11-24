@@ -840,9 +840,19 @@ export class AdminService extends FirestoreService {
         return cache;
       }
 
-      // Fetch all students for campus
+      // If caller requests a force refresh, invalidate the global all-users cache so we fetch fresh data
+      if (forceRefresh) {
+        try {
+          queryCache.invalidate('all-users');
+        } catch (err) {
+          console.warn('Failed to invalidate all-users cache:', err);
+        }
+      }
+
+      // Fetch all users for campus (include everyone in the campus so they are searchable/viewable)
+      // Show all users regardless of their status (active/inactive/dropout/etc.)
       const allUsers = await this.getAllUsers();
-      const students = allUsers.filter(u => u.campus === campusId && !u.isAdmin);
+      const students = allUsers.filter(u => u.campus === campusId);
 
       // Fetch all goals for campus students
       const studentIds = students.map(s => s.id);
