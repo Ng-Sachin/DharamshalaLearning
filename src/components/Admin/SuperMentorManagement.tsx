@@ -73,10 +73,12 @@ const SuperMentorManagement: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  ).filter(user => !showMentorsOnly || user.isMentor);
+  const filteredUsers = users.filter(user => {
+    const name = (user.name || '').toString().toLowerCase();
+    const email = (user.email || '').toString().toLowerCase();
+    const term = searchTerm.toLowerCase();
+    return name.includes(term) || email.includes(term);
+  }).filter(user => !showMentorsOnly || user.isMentor);
 
   const superMentors = filteredUsers.filter(user => user.isSuperMentor);
   const regularMentors = filteredUsers.filter(user => !user.isSuperMentor);

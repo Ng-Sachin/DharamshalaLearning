@@ -850,6 +850,7 @@ export class AdminService extends FirestoreService {
       }
 
       // Fetch all users for campus (include everyone in the campus so they are searchable/viewable)
+      // Show all users regardless of their status (active/inactive/dropout/etc.)
       const allUsers = await this.getAllUsers();
       const students = allUsers.filter(u => u.campus === campusId);
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import CampusJoiningDateModal from './CampusJoiningDateModal';
 
 
 interface ProtectedRouteProps {
@@ -14,7 +15,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAdmin = false,
   redirectTo = '/login'
 }) => {
-  const { currentUser, userData, loading } = useAuth();
+  const { currentUser, userData, loading, setUserData } = useAuth();
   const location = useLocation();
 
   // Show loading spinner while checking auth
@@ -35,6 +36,27 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (requireAdmin && !userData.isAdmin && userData.role !== 'academic_associate') {
     return <Navigate to="/unauthorized" replace />;
   }
+
+    // If user hasn't set campus joining date and is not admin, force them to fill it before entering
+    if (!userData.campus_joining_date && !userData.isAdmin) {
+      return (
+        <>
+          <CampusJoiningDateModal
+            isOpen={true}
+            user={userData}
+            // Do not allow skipping when required by ProtectedRoute
+            requireFill={true}
+            onClose={() => {
+              // no-op when required
+            }}
+            onDateUpdated={(updatedUser) => {
+              // Update auth context with the filled date so ProtectedRoute will render children afterwards
+              setUserData(updatedUser);
+            }}
+          />
+        </>
+      );
+    }
 
   return <>{children}</>;
 };
