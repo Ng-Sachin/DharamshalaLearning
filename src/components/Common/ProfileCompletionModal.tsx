@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Building, Home, Code, CheckCircle } from 'lucide-react';
+import { User, Building, Home, Code, CheckCircle, MessageSquare } from 'lucide-react';
 import Toast from './Toast';
 import { User as UserType } from '../../types';
 import { UserService } from '../../services/firestore';
@@ -17,6 +17,7 @@ interface ProfileFormData {
   house: UserType['house'] | '';
   skills: string[];
   gemini_api_key?: string;
+  discord_user_id?: string;
 }
 
 const CAMPUS_OPTIONS: UserType['campus'][] = [
@@ -55,7 +56,8 @@ export default function ProfileCompletionModal({
     campus: user.campus || '',
     house: user.house || '',
     skills: user.skills || [],
-    gemini_api_key: user.gemini_api_key || ''
+    gemini_api_key: user.gemini_api_key || '',
+    discord_user_id: user.discord_user_id || ''
   });
 
   const [skillInput, setSkillInput] = useState('');
@@ -66,10 +68,11 @@ export default function ProfileCompletionModal({
   if (!user.campus) missingFields.push('campus');
   if (!user.house) missingFields.push('house');
   
-  // Add optional skills and Gemini key steps if not provided
+  // Add optional skills, Gemini key, and Discord ID steps if not provided
   const hasNoSkills = !user.skills || user.skills.length === 0;
   const optionalSteps = [];
   if (hasNoSkills) optionalSteps.push('skills');
+  optionalSteps.push('discord_user_id'); // Discord ID (optional)
   optionalSteps.push('gemini_api_key'); // Always allow Gemini key step (optional)
 
   const totalSteps = Math.max(1, missingFields.length + optionalSteps.length);
@@ -77,15 +80,17 @@ export default function ProfileCompletionModal({
   const getCurrentStepField = () => {
     if (currentStep <= missingFields.length) {
       return missingFields[currentStep - 1];
-    } else if (currentStep === missingFields.length + 1 && hasNoSkills) {
-      return 'skills';
-    } else if (
-      currentStep === missingFields.length + (hasNoSkills ? 2 : 1)
-    ) {
-      return 'gemini_api_key';
-    } else {
-      return 'complete';
     }
+    
+    let optionalStep = currentStep - missingFields.length;
+    if (hasNoSkills) {
+      if (optionalStep === 1) return 'skills';
+      optionalStep--;
+    }
+    if (optionalStep === 1) return 'discord_user_id';
+    if (optionalStep === 2) return 'gemini_api_key';
+    
+    return 'complete';
   };
 
   const handleNext = () => {
@@ -138,6 +143,10 @@ export default function ProfileCompletionModal({
       if (formData.skills.length > 0) {
         updates.skills = formData.skills;
       }
+      // Update Discord ID if provided (optional)
+      if (formData.discord_user_id && formData.discord_user_id.trim().length > 0) {
+        updates.discord_user_id = formData.discord_user_id.trim();
+      }
       // Update Gemini API key if provided (optional)
       if (formData.gemini_api_key && formData.gemini_api_key.trim().length > 0) {
         updates.gemini_api_key = formData.gemini_api_key.trim();
@@ -165,6 +174,7 @@ export default function ProfileCompletionModal({
       case 'campus': return formData.campus !== '';
       case 'house': return formData.house !== '';
       case 'skills': return true; // Skills are optional, always valid
+      case 'discord_user_id': return true; // Discord ID is optional, always valid
       case 'gemini_api_key': return true; // Optional, always valid
       case 'complete': return true;
       default: return false;
@@ -369,6 +379,40 @@ export default function ProfileCompletionModal({
           </div>
         );
 
+      case 'discord_user_id':
+        return (
+          <div className="text-center">
+            <MessageSquare className="w-12 h-12 text-indigo-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Discord Username <span className="text-sm font-normal text-gray-500">(Optional)</span>
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Add your Discord username to receive attendance notifications and daily summaries in your Discord server.
+            </p>
+            <input
+              type="text"
+              value={formData.discord_user_id || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, discord_user_id: e.target.value }))}
+              placeholder="@username or username#1234"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center text-lg"
+            />
+            <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+              <p className="text-sm text-indigo-800 mb-2">
+                <strong>How to find your Discord username:</strong>
+              </p>
+              <ol className="text-sm text-indigo-800 list-decimal list-inside space-y-1">
+                <li>Open Discord</li>
+                <li>Click on your profile picture at bottom-left</li>
+                <li>Copy your username (e.g., @username or username#1234)</li>
+                <li>Paste it here</li>
+              </ol>
+              <p className="text-xs text-indigo-700 mt-2">
+                Your Discord ID will be used to mention you in attendance notifications.
+              </p>
+            </div>
+          </div>
+        );
+
       case 'gemini_api_key':
         return (
           <div className="text-center">
@@ -428,10 +472,13 @@ export default function ProfileCompletionModal({
                 {formData.skills.length > 0 && (
                   <li>• Skills: {formData.skills.join(', ')}</li>
                 )}
+                {formData.discord_user_id && (
+                  <li>• Discord ID: {formData.discord_user_id}</li>
+                )}
                 {formData.gemini_api_key && (
                   <li>• Gemini API Key: <span className="text-xs text-gray-500">(Saved)</span></li>
                 )}
-                {missingFields.length === 0 && formData.skills.length === 0 && !formData.gemini_api_key && (
+                {missingFields.length === 0 && formData.skills.length === 0 && !formData.discord_user_id && !formData.gemini_api_key && (
                   <li className="text-gray-500 italic">No updates needed - profile is complete!</li>
                 )}
               </ul>
